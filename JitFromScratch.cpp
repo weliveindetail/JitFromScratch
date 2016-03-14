@@ -1,4 +1,8 @@
-#include "llvm/Support/raw_ostream.h"
+#include <llvm/Support/ManagedStatic.h>
+#include <llvm/Support/PrettyStackTrace.h>
+#include <llvm/Support/Signals.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/raw_ostream.h>
 
 template <typename T, size_t sizeOfArray>
 constexpr int arrayElements(T (&)[sizeOfArray]) {
@@ -32,14 +36,25 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
   return results;
 }
 
-int main() {
+int main(int argc, char **argv) {
+  using namespace llvm;
+
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  atexit(llvm_shutdown);
+
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
+
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
   int *z = integerDistances(x, y);
 
-  llvm::outs() << "Integer Distances: ";
-  llvm::outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
-  llvm::outs().flush();
+  outs() << "Integer Distances: ";
+  outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
+  outs().flush();
 
   return 0;
 }

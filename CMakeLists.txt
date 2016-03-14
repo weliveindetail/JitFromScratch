@@ -16,7 +16,9 @@ add_executable(JitFromScratch
     JitFromScratch.cpp)
 
 llvm_map_components_to_libnames(LLVM_LIBS
-    core)
+    core
+    x86asmparser
+    x86codegen)
 
 target_link_libraries(JitFromScratch
     ${LLVM_LIBS})
