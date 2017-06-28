@@ -3,9 +3,11 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
-#include <llvm/ExecutionEngine/Orc/NullResolver.h>
+#include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/IR/Mangler.h>
+#include <llvm/Support/DynamicLibrary.h>
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -19,7 +21,9 @@ class SimpleOrcJit {
 public:
   SimpleOrcJit(TargetMachine &targetMachine)
       : DataLayout(targetMachine.createDataLayout()),
-        CompileLayer(ObjectLayer, SimpleCompiler(targetMachine)) {}
+        CompileLayer(ObjectLayer, SimpleCompiler(targetMachine)) {
+    sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+  }
 
   void submitModule(ModulePtr_t module) {
 #ifdef DEBUG_DUMP
@@ -27,9 +31,18 @@ public:
     outs() << *module.get() << "\n\n";
 #endif
 
+    auto lambdaResolver = createLambdaResolver(
+        [&](std::string name) {
+          if (auto Sym = findMangledSymbol(name))
+            return JITSymbol(Sym.getAddress(), Sym.getFlags());
+
+          return JITSymbol(nullptr);
+        },
+        [](std::string) { return nullptr; });
+
     CompileLayer.addModuleSet(singletonSet(std::move(module)),
                               std::make_unique<SectionMemoryManager>(),
-                              std::make_unique<NullResolver>());
+                              std::move(lambdaResolver));
   }
 
   template <class Signature_t>
@@ -44,6 +57,14 @@ private:
   DataLayout DataLayout;
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+
+  JITSymbol findMangledSymbol(std::string name) {
+    // find symbols in host process
+    if (auto SymAddr = RTDyldMemoryManager::getSymbolAddressInProcess(name))
+      return JITSymbol(SymAddr, JITSymbolFlags::Exported);
+
+    return nullptr;
+  }
 
   std::string mangle(std::string name) {
     std::string mangledName;

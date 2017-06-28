@@ -17,10 +17,9 @@ llvm::Expected<std::string> codegenIR(Module *module) {
   LLVMContext &ctx = module->getContext();
   IRBuilder<> Builder(ctx);
 
-  auto name = "substract";
-  auto returnTy = Type::getInt32Ty(ctx);
-  auto argTy = Type::getInt32Ty(ctx);
-  auto signature = FunctionType::get(returnTy, {argTy, argTy}, false);
+  auto name = "abssub";
+  auto intTy = Type::getInt32Ty(ctx);
+  auto signature = FunctionType::get(intTy, {intTy, intTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -33,8 +32,14 @@ llvm::Expected<std::string> codegenIR(Module *module) {
     Argument &argY = *(++argIt);
     argX.setName("x");
     argY.setName("y");
+
     Value *difference = Builder.CreateSub(&argX, &argY, "dist");
-    Builder.CreateRet(difference);
+
+    auto absSig = FunctionType::get(intTy, {intTy}, false);
+    Value *absFunction = module->getOrInsertFunction("abs", absSig);
+    Value *absDifference = Builder.CreateCall(absFunction, {difference});
+
+    Builder.CreateRet(absDifference);
   }
 
   std::string error;
@@ -78,7 +83,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y,
   int *results = customIntAllocator(items);
 
   for (int i = 0; i < items; i++) {
-    results[i] = abs(jittedFn(x[i], y[i]));
+    results[i] = jittedFn(x[i], y[i]);
   }
 
   return results;
