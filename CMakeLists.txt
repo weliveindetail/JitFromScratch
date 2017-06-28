@@ -13,10 +13,12 @@ add_definitions(${LLVM_DEFINITIONS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fno-rtti")
 
 add_executable(JitFromScratch
-    JitFromScratch.cpp)
+    JitFromScratch.cpp
+    SimpleOrcJit.h)
 
 llvm_map_components_to_libnames(LLVM_LIBS
     core
+    orcjit
     x86asmparser
     x86codegen)
 
