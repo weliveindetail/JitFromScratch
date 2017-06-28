@@ -21,6 +21,11 @@ public:
         CompileLayer(ObjectLayer, SimpleCompiler(targetMachine)) {}
 
   void submitModule(ModulePtr_t module) {
+#ifdef DEBUG_DUMP
+    outs() << "Submit LLVM module:\n\n";
+    outs() << *module.get() << "\n\n";
+#endif
+
     CompileLayer.addModuleSet(singletonSet(std::move(module)),
                               std::make_unique<SectionMemoryManager>(),
                               std::make_unique<NullResolver>());
