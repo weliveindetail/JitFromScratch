@@ -11,7 +11,7 @@
 
 #include "SimpleOrcJit.h"
 
-void codegenIR(Module *module) {
+llvm::Expected<std::string> codegenIR(Module *module) {
   using namespace llvm;
 
   LLVMContext &ctx = module->getContext();
@@ -29,8 +29,18 @@ void codegenIR(Module *module) {
   Builder.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
   Builder.CreateRet(ConstantInt::get(returnTy, 0));
 
-  bool broken = verifyFunction(*fn);
-  assert(!broken);
+  std::string error;
+  raw_string_ostream es(error);
+
+  if (verifyFunction(*fn, &es))
+    return make_error<StringError>(
+        Twine("Function verification failed:\n", es.str()), std::error_code());
+
+  if (verifyModule(*module, &es))
+    return make_error<StringError>(
+        Twine("Module verification failed:\n", es.str()), std::error_code());
+
+  return name;
 }
 
 template <typename T, size_t sizeOfArray>
@@ -54,7 +64,8 @@ int *customIntAllocator(int items) {
 // goal for jit-basics:
 // replace this function with a runtime-time compiled version
 template <size_t sizeOfArray>
-int *integerDistances(const int (&x)[sizeOfArray], int *y) {
+int *integerDistances(const int (&x)[sizeOfArray], int *y,
+                      std::function<int(int, int)> jittedFn) {
   int items = arrayElements(x);
   int *results = customIntAllocator(items);
 
@@ -84,13 +95,16 @@ int main(int argc, char **argv) {
   auto module = std::make_unique<Module>("JitFromScratch", context);
   module->setDataLayout(targetMachine->createDataLayout());
 
-  codegenIR(module.get());
+  Expected<std::string> jittedFnName = codegenIR(module.get());
+  if (!jittedFnName)
+    outs() << toString(jittedFnName.takeError());
 
   jit->submitModule(std::move(module));
+  auto jittedFnPtr = jit->getFunction<int(int, int)>(*jittedFnName);
 
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
-  int *z = integerDistances(x, y);
+  int *z = integerDistances(x, y, jittedFnPtr);
 
   outs() << "Integer Distances: ";
   outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
