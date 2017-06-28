@@ -11,7 +11,7 @@
 
 #include "SimpleOrcJit.h"
 
-llvm::Expected<std::string> codegenIR(Module *module) {
+llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
   using namespace llvm;
 
   LLVMContext &ctx = module->getContext();
@@ -66,13 +66,13 @@ llvm::Expected<std::string> codegenIR(Module *module) {
 }
 
 template <typename T, size_t sizeOfArray>
-constexpr int arrayElements(T (&)[sizeOfArray]) {
+constexpr unsigned arrayElements(T (&)[sizeOfArray]) {
   return sizeOfArray;
 }
 
-int *customIntAllocator(int items) {
+int *customIntAllocator(unsigned items) {
   static int memory[100];
-  static int allocIdx = 0;
+  static unsigned allocIdx = 0;
 
   if (allocIdx + items > arrayElements(memory))
     exit(-1);
@@ -88,7 +88,7 @@ int *customIntAllocator(int items) {
 template <size_t sizeOfArray>
 int *integerDistances(const int (&x)[sizeOfArray], int *y,
                       std::function<void(int *, int *, int *)> jittedFn) {
-  int items = arrayElements(x);
+  unsigned items = arrayElements(x);
   int *results = customIntAllocator(items);
 
   jittedFn(const_cast<int *>(x), y, results);
@@ -115,15 +115,18 @@ int main(int argc, char **argv) {
   auto module = std::make_unique<Module>("JitFromScratch", context);
   module->setDataLayout(targetMachine->createDataLayout());
 
-  Expected<std::string> jittedFnName = codegenIR(module.get());
+  int x[]{0, 1, 2};
+  int y[]{3, 1, -1};
+
+  Expected<std::string> jittedFnName =
+      codegenIR(module.get(), arrayElements(x));
+
   if (!jittedFnName)
     outs() << toString(jittedFnName.takeError());
 
   jit->submitModule(std::move(module));
   auto jittedFnPtr = jit->getFunction<void(int *, int *, int *)>(*jittedFnName);
 
-  int x[]{0, 1, 2};
-  int y[]{3, 1, -1};
   int *z = integerDistances(x, y, jittedFnPtr);
 
   outs() << "Integer Distances: ";
