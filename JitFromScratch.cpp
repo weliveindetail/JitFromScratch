@@ -17,7 +17,7 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
   LLVMContext &ctx = module->getContext();
   IRBuilder<> Builder(ctx);
 
-  auto name = "abssub";
+  auto name = "integerDistance";
   auto voidTy = Type::getVoidTy(ctx);
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
@@ -35,19 +35,26 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
     Argument &argPtrY = *(++argIt);
     Argument &argPtrOut = *(++argIt);
 
-    argPtrX.setName("x0");
-    argPtrY.setName("y0");
-    argPtrOut.setName("result0");
-
-    Value *x0 = Builder.CreateLoad(&argPtrX, "x0");
-    Value *y0 = Builder.CreateLoad(&argPtrY, "y0");
-    Value *difference = Builder.CreateSub(x0, y0, "dist");
+    argPtrX.setName("x");
+    argPtrY.setName("y");
+    argPtrOut.setName("result");
 
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module->getOrInsertFunction("abs", absSig);
-    Value *absDifference = Builder.CreateCall(absFunction, {difference});
 
-    Builder.CreateStore(absDifference, &argPtrOut);
+    for (unsigned int i = 0; i < items; i++) {
+      Value *xi_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrX, i);
+      Value *yi_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrY, i);
+
+      Value *x0 = Builder.CreateLoad(xi_ptr);
+      Value *y0 = Builder.CreateLoad(yi_ptr);
+      Value *difference = Builder.CreateSub(x0, y0);
+      Value *absDifference = Builder.CreateCall(absFunction, {difference});
+
+      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrOut, i);
+      Builder.CreateStore(absDifference, ri_ptr);
+    }
+
     Builder.CreateRetVoid();
   }
 
