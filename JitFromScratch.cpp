@@ -1,5 +1,6 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
@@ -28,6 +29,12 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
 
   Builder.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
   {
+#ifdef EXPLICIT_DEBUG_TRAP
+    // Emit an explicit breakpoint in the very beginning of the
+    // function, so that we get the attention of the debugger
+    Builder.CreateCall(Intrinsic::getDeclaration(module, Intrinsic::debugtrap));
+#endif
+
     auto argIt = fn->arg_begin();
     Argument &argPtrX = *argIt;
     Argument &argPtrY = *(++argIt);
