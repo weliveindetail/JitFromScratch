@@ -93,14 +93,6 @@ int *customIntAllocator(unsigned items) {
   return block;
 }
 
-// goal for jit-basics:
-// replace this function with a runtime-time compiled version
-template <size_t sizeOfArray>
-int *integerDistances(const int (&x)[sizeOfArray], int *y,
-                      std::function<int *(int *, int *)> jittedFn) {
-  return jittedFn(const_cast<int *>(x), y);
-}
-
 int main(int argc, char **argv) {
   using namespace llvm;
 
@@ -130,9 +122,9 @@ int main(int argc, char **argv) {
     outs() << toString(jittedFnName.takeError());
 
   jit->submitModule(std::move(module));
-  auto jittedFnPtr = jit->getFunction<int *(int *, int *)>(*jittedFnName);
+  auto integerDistances = jit->getFunction<int *(int *, int *)>(*jittedFnName);
 
-  int *z = integerDistances(x, y, jittedFnPtr);
+  int *z = integerDistances(x, y);
 
   outs() << "Integer Distances: ";
   outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
