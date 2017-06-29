@@ -16,7 +16,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEXPLICIT_DEBUG_TRAP")
 
 add_executable(JitFromScratch
     JitFromScratch.cpp
-    SimpleOrcJit.h)
+    SimpleOrcJit.h
+    AsmParser/LLLexer.h
+    AsmParser/LLLexer.cpp
+    AsmParser/LLParser.h
+    AsmParser/LLParser.cpp
+    AsmParser/LLToken.h)
 
 llvm_map_components_to_libnames(LLVM_LIBS
     core
