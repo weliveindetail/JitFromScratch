@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <vector>
+
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
@@ -9,6 +12,8 @@
 #include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/IR/Mangler.h>
 #include <llvm/Support/DynamicLibrary.h>
+
+#include "SimpleLLDebugAsm.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -56,7 +61,20 @@ public:
     sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
+  ~SimpleOrcJit() {
+    // delete all temporary debug sources
+    for (auto deleter : DebugFileDeleters)
+      deleter();
+  }
+
   void submitModule(ModulePtr_t module) {
+    // add debug info
+    std::function<void()> debugFileDeleter;
+    std::tie(module, debugFileDeleter) =
+        SimpleLLDebugAsm().Run(std::move(module));
+
+    DebugFileDeleters.push_back(debugFileDeleter);
+
 #ifdef DEBUG_DUMP
     outs() << "Submit LLVM module:\n\n";
     outs() << *module.get() << "\n\n";
@@ -90,6 +108,8 @@ private:
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
   JITEventListener *GdbEventListener;
+
+  std::vector<std::function<void()>> DebugFileDeleters;
 
   JITSymbol findMangledSymbol(std::string name) {
     // find symbols in host process
