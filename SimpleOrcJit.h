@@ -1,6 +1,7 @@
 #pragma once
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
@@ -10,18 +11,48 @@
 #include <llvm/Support/DynamicLibrary.h>
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::orc;
 
 class SimpleOrcJit {
+  class NotifyObjectLoaded_t {
+  public:
+    using LoadedObjInfoList_t =
+        std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>;
+    using ObjectHandle_t = ObjectLinkingLayerBase::ObjSetHandleT;
+
+    NotifyObjectLoaded_t(SimpleOrcJit &jit) : Jit(jit) {}
+
+    template <typename ObjectList_t>
+    void operator()(ObjectHandle_t, const ObjectList_t &objects,
+                    const LoadedObjInfoList_t &infos) const {
+      for (unsigned i = 0; i < objects.size(); ++i)
+        Jit.GdbEventListener->NotifyObjectEmitted(getObject(*objects[i]),
+                                                  *infos[i]);
+    }
+
+  private:
+    static const ObjectFile &getObject(const ObjectFile &obj) { return obj; }
+
+    template <typename Object_t>
+    static const ObjectFile &getObject(const OwningBinary<Object_t> &obj) {
+      return *obj.getBinary();
+    }
+
+    SimpleOrcJit &Jit;
+  };
+
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
 
-  using ObjectLayer_t = ObjectLinkingLayer<>;
+  using ObjectLayer_t = ObjectLinkingLayer<NotifyObjectLoaded_t>;
   using CompileLayer_t = IRCompileLayer<ObjectLayer_t>;
 
 public:
   SimpleOrcJit(TargetMachine &targetMachine)
-      : DataLayout(targetMachine.createDataLayout()),
-        CompileLayer(ObjectLayer, SimpleCompiler(targetMachine)) {
+      : DataLayout(targetMachine.createDataLayout()), NotifyObjectLoaded(*this),
+        ObjectLayer(NotifyObjectLoaded),
+        CompileLayer(ObjectLayer, SimpleCompiler(targetMachine)),
+        GdbEventListener(JITEventListener::createGDBRegistrationListener()) {
     sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
@@ -55,8 +86,10 @@ public:
 
 private:
   DataLayout DataLayout;
+  NotifyObjectLoaded_t NotifyObjectLoaded;
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+  JITEventListener *GdbEventListener;
 
   JITSymbol findMangledSymbol(std::string name) {
     // find symbols in host process
