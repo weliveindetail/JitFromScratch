@@ -18,11 +18,9 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
   IRBuilder<> Builder(ctx);
 
   auto name = "integerDistance";
-  auto voidTy = Type::getVoidTy(ctx);
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
-  auto signature =
-      FunctionType::get(voidTy, {intPtrTy, intPtrTy, intPtrTy}, false);
+  auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -33,11 +31,16 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
     auto argIt = fn->arg_begin();
     Argument &argPtrX = *argIt;
     Argument &argPtrY = *(++argIt);
-    Argument &argPtrOut = *(++argIt);
 
     argPtrX.setName("x");
     argPtrY.setName("y");
-    argPtrOut.setName("result");
+
+    auto allocSig = FunctionType::get(intPtrTy, {intTy}, false);
+    Value *allocFunction =
+        module->getOrInsertFunction("_Z18customIntAllocatorj", allocSig);
+
+    Value *results_size = ConstantInt::get(intTy, items);
+    Value *results_ptr = Builder.CreateCall(allocFunction, {results_size});
 
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module->getOrInsertFunction("abs", absSig);
@@ -51,11 +54,11 @@ llvm::Expected<std::string> codegenIR(Module *module, unsigned items) {
       Value *difference = Builder.CreateSub(x0, y0);
       Value *absDifference = Builder.CreateCall(absFunction, {difference});
 
-      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrOut, i);
+      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, results_ptr, i);
       Builder.CreateStore(absDifference, ri_ptr);
     }
 
-    Builder.CreateRetVoid();
+    Builder.CreateRet(results_ptr);
   }
 
   std::string error;
@@ -94,13 +97,8 @@ int *customIntAllocator(unsigned items) {
 // replace this function with a runtime-time compiled version
 template <size_t sizeOfArray>
 int *integerDistances(const int (&x)[sizeOfArray], int *y,
-                      std::function<void(int *, int *, int *)> jittedFn) {
-  unsigned items = arrayElements(x);
-  int *results = customIntAllocator(items);
-
-  jittedFn(const_cast<int *>(x), y, results);
-
-  return results;
+                      std::function<int *(int *, int *)> jittedFn) {
+  return jittedFn(const_cast<int *>(x), y);
 }
 
 int main(int argc, char **argv) {
@@ -132,7 +130,7 @@ int main(int argc, char **argv) {
     outs() << toString(jittedFnName.takeError());
 
   jit->submitModule(std::move(module));
-  auto jittedFnPtr = jit->getFunction<void(int *, int *, int *)>(*jittedFnName);
+  auto jittedFnPtr = jit->getFunction<int *(int *, int *)>(*jittedFnName);
 
   int *z = integerDistances(x, y, jittedFnPtr);
 
