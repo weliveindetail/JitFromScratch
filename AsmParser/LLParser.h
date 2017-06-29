@@ -14,7 +14,9 @@
 #ifndef LLVM_LIB_ASMPARSER_LLPARSER_H
 #define LLVM_LIB_ASMPARSER_LLPARSER_H
 
-#include "LLLexer.h"
+#include "AsmParser/LLLexer.h"
+#include "SimpleLLDebugInfo.h"
+
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Attributes.h"
@@ -100,6 +102,8 @@ private:
   Module *M;
   SlotMapping *Slots;
 
+  std::unique_ptr<SimpleLLDebugInfo> DebugInfo;
+
   // Instruction metadata resolution.  Each instruction can have a list of
   // MDRef info associated with them.
   //
@@ -148,9 +152,12 @@ private:
 
 public:
   LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
+           std::unique_ptr<SimpleLLDebugInfo> DebugInfo,
            SlotMapping *Slots = nullptr)
       : Context(M->getContext()), Lex(F, SM, Err, M->getContext()), M(M),
-        Slots(Slots), BlockAddressPFS(nullptr) {}
+        DebugInfo(std::move(DebugInfo)), Slots(Slots),
+        BlockAddressPFS(nullptr) {}
+
   bool Run();
 
   bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
@@ -337,15 +344,19 @@ private:
     std::map<unsigned, std::pair<Value *, LocTy>> ForwardRefValIDs;
     std::vector<Value *> NumberedVals;
 
+    DISubprogram *DebugSubprogram;
+
     /// FunctionNumber - If this is an unnamed function, this is the slot
     /// number of it, otherwise it is -1.
     int FunctionNumber;
 
   public:
-    PerFunctionState(LLParser &p, Function &f, int FunctionNumber);
+    PerFunctionState(LLParser &p, Function &f, int FunctionNumber,
+                     DISubprogram *DebugSubprogram);
     ~PerFunctionState();
 
     Function &getFunction() const { return F; }
+    DISubprogram *getDebugSubprogram() const { return DebugSubprogram; };
 
     bool FinishFunction();
 
@@ -464,7 +475,7 @@ private:
   };
   bool ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList, bool &isVarArg);
   bool ParseFunctionHeader(Function *&Fn, bool isDefine);
-  bool ParseFunctionBody(Function &Fn);
+  bool ParseFunctionBody(Function &Fn, DISubprogram *SP);
   bool ParseBasicBlock(PerFunctionState &PFS);
 
   enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

@@ -32,6 +32,7 @@ class LLLexer {
   SMDiagnostic &ErrorInfo;
   SourceMgr &SM;
   LLVMContext &Context;
+  unsigned int CurLine;
 
   // Information about the current token.
   const char *TokStart;
@@ -56,6 +57,8 @@ public:
   unsigned getUIntVal() const { return UIntVal; }
   const APSInt &getAPSIntVal() const { return APSIntVal; }
   const APFloat &getAPFloatVal() const { return APFloatVal; }
+
+  unsigned int getCurrentLine() const { return CurLine; }
 
   bool Error(LocTy L, const Twine &Msg) const;
   bool Error(const Twine &Msg) const { return Error(getLoc(), Msg); }

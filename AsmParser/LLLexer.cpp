@@ -164,6 +164,7 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &sm, SMDiagnostic &Err,
                  LLVMContext &C)
     : CurBuf(StartBuf), ErrorInfo(Err), SM(sm), Context(C), APFloatVal(0.0) {
   CurPtr = CurBuf.begin();
+  CurLine = 0;
 }
 
 int LLLexer::getNextChar() {
@@ -200,9 +201,11 @@ lltok::Kind LLLexer::LexToken() {
     case 0:
     case ' ':
     case '\t':
-    case '\n':
     case '\r':
       // Ignore whitespace.
+      continue;
+    case '\n':
+      CurLine++;
       continue;
     case '+':
       return LexPositive();

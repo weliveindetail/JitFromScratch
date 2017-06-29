@@ -17,6 +17,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEXPLICIT_DEBUG_TRAP")
 add_executable(JitFromScratch
     JitFromScratch.cpp
     SimpleOrcJit.h
+    SimpleLLDebugInfo.h
     AsmParser/LLLexer.h
     AsmParser/LLLexer.cpp
     AsmParser/LLParser.h
