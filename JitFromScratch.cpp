@@ -13,7 +13,7 @@
 
 #include "SimpleOrcJit.h"
 
-llvm::Expected<std::string> codegenIR(llvm::Module *module) {
+llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
   using namespace llvm;
 
   LLVMContext &ctx = module->getContext();
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
   module->setDataLayout(targetMachine->createDataLayout());
 
   // Generate LLVM IR for the function.
-  Expected<std::string> jitedFnName = codegenIR(module.get());
+  Expected<std::string> jitedFnName = codegenIR(module.get(), arrayElements(x));
   if (!jitedFnName)
     outs() << toString(jitedFnName.takeError());
 
