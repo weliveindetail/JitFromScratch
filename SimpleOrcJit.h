@@ -3,10 +3,12 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
-#include <llvm/ExecutionEngine/Orc/NullResolver.h>
+#include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/IR/Mangler.h>
 #include <llvm/Support/Debug.h>
+#include <llvm/Support/DynamicLibrary.h>
 
 #include <functional>
 #include <memory>
@@ -26,8 +28,14 @@ public:
   SimpleOrcJit(llvm::TargetMachine &targetMachine)
       : DL(targetMachine.createDataLayout()),
         MemoryManagerPtr(std::make_shared<llvm::SectionMemoryManager>()),
-        SymbolResolverPtr(std::make_shared<llvm::orc::NullResolver>()),
-        CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)) {}
+        SymbolResolverPtr(llvm::orc::createLambdaResolver(
+            [&](std::string name) { return findSymbolInJITedCode(name); },
+            [&](std::string name) { return findSymbolInHostProcess(name); })),
+        CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)) {
+    // Load own executable as dynamic library.
+    // Required for RTDyldMemoryManager::getSymbolAddressInProcess().
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+  }
 
   void submitModule(ModulePtr_t module) {
     DEBUG({
@@ -41,7 +49,7 @@ public:
 
   template <class Signature_t>
   std::function<Signature_t> getFunction(std::string unmangledName) {
-    auto jitSymbol = CompileLayer.findSymbol(mangle(unmangledName), false);
+    auto jitSymbol = findSymbolInJITedCode(mangle(unmangledName));
     auto functionAddr = jitSymbol.getAddress();
 
     return reinterpret_cast<Signature_t *>(functionAddr);
@@ -54,6 +62,18 @@ private:
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+
+  llvm::JITSymbol findSymbolInJITedCode(std::string mangledName) {
+    constexpr bool exportedSymbolsOnly = false;
+    return CompileLayer.findSymbol(mangledName, exportedSymbolsOnly);
+  }
+
+  llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) {
+    uint64_t addr =
+        llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName);
+    return addr ? llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported)
+                : nullptr;
+  }
 
   // System name mangler: may prepend '_' on OSX or '\x1' on Windows
   std::string mangle(std::string name) {
