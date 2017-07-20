@@ -1,0 +1,2 @@
+clang -c -o mangle_ref_unix.o mangle_ref.cpp
+nm mangle_ref_unix.o
