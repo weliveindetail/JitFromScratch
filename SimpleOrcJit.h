@@ -69,10 +69,17 @@ private:
   }
 
   llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) {
-    uint64_t addr =
-        llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName);
-    return addr ? llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported)
-                : nullptr;
+    // Hack: Provide function pointer for dedicated externals.
+    if (mangledName == mangle("customIntAllocator"))
+      return llvm::JITSymbol(llvm::JITTargetAddress(&customIntAllocator),
+                             llvm::JITSymbolFlags::Exported);
+
+    // Lookup function address in the host symbol table.
+    if (llvm::JITTargetAddress addr =
+            llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName))
+      return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
+
+    return nullptr;
   }
 
   // System name mangler: may prepend '_' on OSX or '\x1' on Windows
