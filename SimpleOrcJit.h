@@ -5,9 +5,12 @@
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/NullResolver.h>
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#include <llvm/Support/Debug.h>
 
 #include <memory>
 #include <vector>
+
+#define DEBUG_TYPE "jitfromscratch"
 
 class SimpleOrcJit {
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
@@ -25,6 +28,11 @@ public:
         CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)) {}
 
   void submitModule(ModulePtr_t module) {
+    DEBUG({
+      llvm::dbgs() << "Submit LLVM module:\n\n";
+      llvm::dbgs() << *module.get() << "\n\n";
+    });
+
     CompileLayer.addModuleSet(singletonSet(std::move(module)), MemoryManagerPtr,
                               SymbolResolverPtr);
   }

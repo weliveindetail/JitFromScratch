@@ -1,6 +1,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
@@ -53,6 +54,9 @@ int main(int argc, char **argv) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
+
+  // Parse -debug and -debug-only options.
+  cl::ParseCommandLineOptions(argc, argv, "JitFromScratch example project\n");
 
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
