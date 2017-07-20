@@ -3,6 +3,7 @@
 #include "ClangCC1Driver.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
@@ -25,11 +26,41 @@
 #endif
 
 class SimpleOrcJit {
+  class NotifyObjectLoaded_t {
+    // No templates but shortcuts for typenames to get straight compiler errors
+    // for API changes.
+    template <class Item_t>
+    using UniquePtrs_t = std::vector<std::unique_ptr<Item_t>>;
+
+    using LoadedObjInfoList_t =
+        UniquePtrs_t<llvm::RuntimeDyld::LoadedObjectInfo>;
+
+    using ObjList_t =
+        UniquePtrs_t<llvm::object::OwningBinary<llvm::object::ObjectFile>>;
+
+    using UnusedObjHandle_t = llvm::orc::ObjectLinkingLayerBase::ObjSetHandleT;
+
+  public:
+    NotifyObjectLoaded_t(SimpleOrcJit &jit) : Jit(jit) {}
+
+    // Called by the ObjectLayer for each emitted object-set.
+    // Forward notification to GDB JIT interface.
+    void operator()(UnusedObjHandle_t, const ObjList_t &objs,
+                    const LoadedObjInfoList_t &infos) const {
+      for (unsigned i = 0; i < objs.size(); ++i)
+        Jit.GdbEventListener->NotifyObjectEmitted(*objs[i]->getBinary(),
+                                                  *infos[i]);
+    }
+
+  private:
+    SimpleOrcJit &Jit;
+  };
+
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
   using MemoryManagerPtr_t = std::shared_ptr<llvm::RuntimeDyld::MemoryManager>;
   using SymbolResolverPtr_t = std::shared_ptr<llvm::JITSymbolResolver>;
 
-  using ObjectLayer_t = llvm::orc::ObjectLinkingLayer<>;
+  using ObjectLayer_t = llvm::orc::ObjectLinkingLayer<NotifyObjectLoaded_t>;
   using CompileLayer_t = llvm::orc::IRCompileLayer<ObjectLayer_t>;
 
 public:
@@ -39,10 +70,15 @@ public:
         SymbolResolverPtr(llvm::orc::createLambdaResolver(
             [&](std::string name) { return findSymbolInJITedCode(name); },
             [&](std::string name) { return findSymbolInHostProcess(name); })),
+        NotifyObjectLoaded(*this), ObjectLayer(NotifyObjectLoaded),
         CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)) {
     // Load own executable as dynamic library.
     // Required for RTDyldMemoryManager::getSymbolAddressInProcess().
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+
+    // Internally points to a llvm::ManagedStatic.
+    // No need to free. "create" is a misleading term here.
+    GdbEventListener = llvm::JITEventListener::createGDBRegistrationListener();
   }
 
   void submitModule(ModulePtr_t module) {
@@ -73,6 +109,8 @@ private:
   ClangCC1Driver ClangDriver;
   MemoryManagerPtr_t MemoryManagerPtr;
   SymbolResolverPtr_t SymbolResolverPtr;
+  NotifyObjectLoaded_t NotifyObjectLoaded;
+  llvm::JITEventListener *GdbEventListener;
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
