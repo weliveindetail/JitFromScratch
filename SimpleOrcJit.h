@@ -17,9 +17,9 @@
 #define DEBUG_TYPE "jitfromscratch"
 
 #if _WIN32
-#define DECL_JIT_ACCESS_C extern "C" __declspec(dllexport)
+#define DECL_JIT_ACCESS_CPP __declspec(dllexport)
 #else
-#define DECL_JIT_ACCESS_C extern "C"
+#define DECL_JIT_ACCESS_CPP
 #endif
 
 class SimpleOrcJit {
