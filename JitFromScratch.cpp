@@ -1,8 +1,13 @@
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include "SimpleOrcJit.h"
 
 // Determine the size of a C array at compile-time.
 template <typename T, size_t sizeOfArray>
@@ -51,6 +56,15 @@ int main(int argc, char **argv) {
 
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
+
+  auto targetMachine = EngineBuilder().selectTarget();
+  auto jit = std::make_unique<SimpleOrcJit>(*targetMachine);
+
+  LLVMContext context;
+  auto module = std::make_unique<Module>("JitFromScratch", context);
+  module->setDataLayout(targetMachine->createDataLayout());
+
+  jit->submitModule(std::move(module));
   int *z = integerDistances(x, y);
 
   outs() << "Integer Distances: ";
