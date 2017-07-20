@@ -24,12 +24,9 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
   IRBuilder<> Builder(ctx);
 
   auto name = "integerDistance";
-  auto voidTy = Type::getVoidTy(ctx);
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
-  auto intPtrPtrTy = intPtrTy->getPointerTo();
-  auto signature =
-      FunctionType::get(voidTy, {intPtrTy, intPtrTy, intPtrPtrTy}, false);
+  auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -40,11 +37,9 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
     auto argIt = fn->arg_begin();
     Argument &argPtrX = *argIt;
     Argument &argPtrY = *(++argIt);
-    Argument &argPtrOut = *(++argIt);
 
     argPtrX.setName("x");
     argPtrY.setName("y");
-    argPtrOut.setName("result");
 
     auto allocSig = FunctionType::get(intPtrTy, {intTy}, false);
     Value *allocFunction =
@@ -69,8 +64,7 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
       Builder.CreateStore(absDifference, ri_ptr);
     }
 
-    Builder.CreateStore(results_ptr, &argPtrOut);
-    Builder.CreateRetVoid();
+    Builder.CreateRet(results_ptr);
   }
 
   std::string error;
@@ -109,12 +103,8 @@ int *customIntAllocator(unsigned items) {
 
 // This function will be replaced by a runtime-time compiled version.
 int *integerDistances(int *x, int *y,
-                      std::function<void(int *, int *, int **)> jitedFn) {
-  int *results;
-
-  jitedFn(x, y, &results);
-
-  return results;
+                      std::function<int *(int *, int *)> jitedFn) {
+  return jitedFn(x, y);
 }
 
 int main(int argc, char **argv) {
@@ -149,7 +139,7 @@ int main(int argc, char **argv) {
 
   // Compile to machine code and link.
   jit->submitModule(std::move(module));
-  auto jitedFnPtr = jit->getFunction<void(int *, int *, int **)>(*jitedFnName);
+  auto jitedFnPtr = jit->getFunction<int *(int *, int *)>(*jitedFnName);
 
   int *z = integerDistances(x, y, jitedFnPtr);
 
