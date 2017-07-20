@@ -61,6 +61,8 @@ target_compile_definitions(JitFromScratch
 # JitFromScratch dependencies
 llvm_map_components_to_libnames(LLVM_LIBS
     core
+    x86asmparser
+    x86codegen
 )
 
 target_link_libraries(JitFromScratch
