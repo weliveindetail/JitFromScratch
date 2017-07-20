@@ -19,7 +19,7 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module) {
   LLVMContext &ctx = module->getContext();
   IRBuilder<> Builder(ctx);
 
-  auto name = "getZero";
+  auto name = "substract";
   auto returnTy = Type::getInt32Ty(ctx);
   auto argTy = Type::getInt32Ty(ctx);
   auto signature = FunctionType::get(returnTy, {argTy, argTy}, false);
@@ -29,7 +29,13 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module) {
   fn->setName(name); // so the CompileLayer can find it
 
   Builder.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
-  Builder.CreateRet(ConstantInt::get(returnTy, 0));
+  {
+    auto argIt = fn->arg_begin();
+    Argument &argX = *argIt;
+    Argument &argY = *(++argIt);
+    Value *difference = Builder.CreateSub(&argX, &argY);
+    Builder.CreateRet(difference);
+  }
 
   std::string error;
   raw_string_ostream es(error);
@@ -73,7 +79,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y,
   int *results = customIntAllocator(items);
 
   for (int i = 0; i < items; i++) {
-    results[i] = abs(x[i] - y[i]);
+    results[i] = abs(jitedFn(x[i], y[i]));
   }
 
   return results;
