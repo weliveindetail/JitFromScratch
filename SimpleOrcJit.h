@@ -5,8 +5,10 @@
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/NullResolver.h>
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#include <llvm/IR/Mangler.h>
 #include <llvm/Support/Debug.h>
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -37,6 +39,14 @@ public:
                               SymbolResolverPtr);
   }
 
+  template <class Signature_t>
+  std::function<Signature_t> getFunction(std::string unmangledName) {
+    auto jitSymbol = CompileLayer.findSymbol(mangle(unmangledName), false);
+    auto functionAddr = jitSymbol.getAddress();
+
+    return reinterpret_cast<Signature_t *>(functionAddr);
+  }
+
 private:
   llvm::DataLayout DL;
   MemoryManagerPtr_t MemoryManagerPtr;
@@ -44,6 +54,14 @@ private:
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+
+  // System name mangler: may prepend '_' on OSX or '\x1' on Windows
+  std::string mangle(std::string name) {
+    std::string buffer;
+    llvm::raw_string_ostream ostream(buffer);
+    llvm::Mangler::getNameWithPrefix(ostream, std::move(name), DL);
+    return ostream.str();
+  }
 
   template <typename T> static std::vector<T> singletonSet(T t) {
     std::vector<T> vec;

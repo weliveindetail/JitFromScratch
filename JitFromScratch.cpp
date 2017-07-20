@@ -4,6 +4,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Error.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
@@ -12,7 +13,7 @@
 
 #include "SimpleOrcJit.h"
 
-void codegenIR(llvm::Module *module) {
+llvm::Expected<std::string> codegenIR(llvm::Module *module) {
   using namespace llvm;
 
   LLVMContext &ctx = module->getContext();
@@ -25,12 +26,23 @@ void codegenIR(llvm::Module *module) {
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
+  fn->setName(name); // so the CompileLayer can find it
 
   Builder.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
   Builder.CreateRet(ConstantInt::get(returnTy, 0));
 
-  bool broken = verifyFunction(*fn);
-  assert(!broken);
+  std::string error;
+  raw_string_ostream es(error);
+
+  if (verifyFunction(*fn, &es))
+    return make_error<StringError>(
+        Twine("Function verification failed:\n", es.str()), std::error_code());
+
+  if (verifyModule(*module, &es))
+    return make_error<StringError>(
+        Twine("Module verification failed:\n", es.str()), std::error_code());
+
+  return name;
 }
 
 // Determine the size of a C array at compile-time.
@@ -55,7 +67,8 @@ int *customIntAllocator(unsigned items) {
 
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
-int *integerDistances(const int (&x)[sizeOfArray], int *y) {
+int *integerDistances(const int (&x)[sizeOfArray], int *y,
+                      std::function<int(int, int)> jitedFn) {
   unsigned items = arrayElements(x);
   int *results = customIntAllocator(items);
 
@@ -92,12 +105,15 @@ int main(int argc, char **argv) {
   module->setDataLayout(targetMachine->createDataLayout());
 
   // Generate LLVM IR for the function.
-  codegenIR(module.get());
+  Expected<std::string> jitedFnName = codegenIR(module.get());
+  if (!jitedFnName)
+    outs() << toString(jitedFnName.takeError());
 
   // Compile to machine code and link.
   jit->submitModule(std::move(module));
+  auto jitedFnPtr = jit->getFunction<int(int, int)>(*jitedFnName);
 
-  int *z = integerDistances(x, y);
+  int *z = integerDistances(x, y, jitedFnPtr);
 
   outs() << "Integer Distances: ";
   outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
