@@ -11,10 +11,6 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
-// Hack: Let the JIT know about the external function, so it can do a simple
-// manual lookup.
-int *customIntAllocator(unsigned items);
-
 #include "SimpleOrcJit.h"
 
 llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
@@ -121,6 +117,7 @@ int main(int argc, char **argv) {
 
   auto targetMachine = EngineBuilder().selectTarget();
   auto jit = std::make_unique<SimpleOrcJit>(*targetMachine);
+  jit->addExplicitFunctionMapping("customIntAllocator", &customIntAllocator);
 
   LLVMContext context;
   auto module = std::make_unique<Module>("JitFromScratch", context);
