@@ -135,6 +135,9 @@ int main(int argc, char **argv) {
   // Invoke JITed function.
   int *z = integerDistances(x, y);
 
+  // Run "JitFromScratch -debug -debug-only jitfromscratch" to see output.
+  jit->demoGlobalMappingSideEffect();
+
   outs() << "Integer Distances: ";
   outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
   outs().flush();

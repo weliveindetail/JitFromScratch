@@ -41,11 +41,6 @@ public:
   }
 
   void submitModule(ModulePtr_t module) {
-    DEBUG({
-      llvm::dbgs() << "Submit LLVM module:\n\n";
-      llvm::dbgs() << *module.get() << "\n\n";
-    });
-
     CompileLayer.addModuleSet(singletonSet(std::move(module)), MemoryManagerPtr,
                               SymbolResolverPtr);
   }
@@ -53,6 +48,16 @@ public:
   template <class FunctionPtr_t>
   void addExplicitFunctionMapping(std::string name, FunctionPtr_t *ptr) {
     MappingLayer.setGlobalMapping(mangle(name), llvm::JITTargetAddress(ptr));
+  }
+
+  void demoGlobalMappingSideEffect() {
+    DEBUG({
+      if (auto sym = findSymbolInHostProcess(mangle("integerDistance")))
+        llvm::dbgs() << "Found symbol 'integerDistance' by calling "
+                     << "'findSymbolInHostProcess()'\n"
+                     << "This is a side effect of using the GlobalMappingLayer."
+                     << "\n\n";
+    });
   }
 
   template <class Signature_t>
