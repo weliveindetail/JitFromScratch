@@ -3,12 +3,15 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/IRTransformLayer.h>
 #include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/RTDyldMemoryManager.h>
 #include <llvm/IR/Mangler.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/DynamicLibrary.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/Scalar.h>
 
 #include <functional>
 #include <memory>
@@ -20,9 +23,12 @@ class SimpleOrcJit {
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
   using MemoryManagerPtr_t = std::shared_ptr<llvm::RuntimeDyld::MemoryManager>;
   using SymbolResolverPtr_t = std::shared_ptr<llvm::JITSymbolResolver>;
+  using Optimize_f = std::function<ModulePtr_t(ModulePtr_t)>;
 
   using ObjectLayer_t = llvm::orc::ObjectLinkingLayer<>;
   using CompileLayer_t = llvm::orc::IRCompileLayer<ObjectLayer_t>;
+  using OptimizeLayer_t =
+      llvm::orc::IRTransformLayer<CompileLayer_t, Optimize_f>;
 
 public:
   SimpleOrcJit(llvm::TargetMachine &targetMachine)
@@ -31,7 +37,10 @@ public:
         SymbolResolverPtr(llvm::orc::createLambdaResolver(
             [&](std::string name) { return findSymbolInJITedCode(name); },
             [&](std::string name) { return findSymbolInHostProcess(name); })),
-        CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)) {
+        CompileLayer(ObjectLayer, llvm::orc::SimpleCompiler(targetMachine)),
+        OptimizeLayer(CompileLayer, [this](ModulePtr_t module) {
+          return optimizeModule(std::move(module));
+        }) {
     // Load own executable as dynamic library.
     // Required for RTDyldMemoryManager::getSymbolAddressInProcess().
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
@@ -43,8 +52,8 @@ public:
       llvm::dbgs() << *module.get() << "\n\n";
     });
 
-    CompileLayer.addModuleSet(singletonSet(std::move(module)), MemoryManagerPtr,
-                              SymbolResolverPtr);
+    OptimizeLayer.addModuleSet(singletonSet(std::move(module)),
+                               MemoryManagerPtr, SymbolResolverPtr);
   }
 
   template <class Signature_t>
@@ -62,6 +71,38 @@ private:
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+  OptimizeLayer_t OptimizeLayer;
+
+  ModulePtr_t optimizeModule(ModulePtr_t module) {
+    using namespace llvm;
+
+    PassManagerBuilder PMBuilder;
+    PMBuilder.BBVectorize = true;
+    PMBuilder.SLPVectorize = true;
+    PMBuilder.VerifyInput = true;
+    PMBuilder.VerifyOutput = true;
+
+    legacy::FunctionPassManager perFunctionPasses(module.get());
+    PMBuilder.populateFunctionPassManager(perFunctionPasses);
+
+    perFunctionPasses.doInitialization();
+
+    for (Function &function : *module)
+      perFunctionPasses.run(function);
+
+    perFunctionPasses.doFinalization();
+
+    legacy::PassManager perModulePasses;
+    PMBuilder.populateModulePassManager(perModulePasses);
+    perModulePasses.run(*module);
+
+    DEBUG({
+      outs() << "Optimized module:\n\n";
+      outs() << *module.get() << "\n\n";
+    });
+
+    return module;
+  }
 
   llvm::JITSymbol findSymbolInJITedCode(std::string mangledName) {
     constexpr bool exportedSymbolsOnly = false;
