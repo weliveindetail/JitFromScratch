@@ -51,17 +51,26 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module->getOrInsertFunction("abs", absSig);
 
-    for (unsigned int i = 0; i < items; i++) {
-      Value *xi_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrX, i);
-      Value *yi_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrY, i);
+    std::vector<Value *> x_ptrs(items);
+    std::vector<Value *> y_ptrs(items);
+    std::vector<Value *> r_ptrs(items);
+    std::vector<Value *> distances(items);
 
-      Value *x0 = Builder.CreateLoad(xi_ptr);
-      Value *y0 = Builder.CreateLoad(yi_ptr);
+    for (unsigned i = 0; i < items; i++) {
+      x_ptrs[i] = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrX, i);
+      y_ptrs[i] = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrY, i);
+      r_ptrs[i] = Builder.CreateConstInBoundsGEP1_32(intTy, results_ptr, i);
+    }
+
+    for (unsigned i = 0; i < items; i++) {
+      Value *x0 = Builder.CreateLoad(x_ptrs[i]);
+      Value *y0 = Builder.CreateLoad(y_ptrs[i]);
       Value *difference = Builder.CreateSub(x0, y0);
-      Value *absDifference = Builder.CreateCall(absFunction, {difference});
+      distances[i] = Builder.CreateCall(absFunction, {difference});
+    }
 
-      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, results_ptr, i);
-      Builder.CreateStore(absDifference, ri_ptr);
+    for (unsigned i = 0; i < items; i++) {
+      Builder.CreateStore(distances[i], r_ptrs[i]);
     }
 
     Builder.CreateRet(results_ptr);
