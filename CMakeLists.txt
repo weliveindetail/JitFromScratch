@@ -26,6 +26,8 @@ message(STATUS "System: ${OS_NAME}")
 add_executable(JitFromScratch
     JitFromScratch.cpp
     SimpleOrcJit.h
+    ClangCC1Driver.cpp
+    ClangCC1Driver.h
 )
 
 set_target_properties(JitFromScratch
@@ -86,6 +88,13 @@ target_compile_definitions(JitFromScratch
     CLANG_ENABLE_ARCMT
     CLANG_ENABLE_OBJC_REWRITER
     CLANG_ENABLE_STATIC_ANALYZER
+)
+
+# Project-specific definitions
+target_compile_definitions(JitFromScratch
+  PRIVATE
+    # Supply path to Clang resources in the LLVM/Clang build directory
+    JIT_FROM_SCRATCH_CLANG_RESOURCE_DIR=${LLVM_BUILD_BINARY_DIR}/lib/clang/${LLVM_PACKAGE_VERSION}
 )
 
 # Clang dependencies
