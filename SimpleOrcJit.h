@@ -6,9 +6,12 @@
 #include <llvm/ExecutionEngine/Orc/NullResolver.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/Support/Debug.h>
 
 #include <memory>
 #include <vector>
+
+#define DEBUG_TYPE "jitfromscratch"
 
 class SimpleOrcJit {
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
@@ -26,6 +29,11 @@ public:
         CompileLayer(ObjectLayer, IRCompiler_t(targetMachine)) {}
 
   void submitModule(ModulePtr_t module) {
+    DEBUG({
+      llvm::dbgs() << "Submit LLVM module:\n\n";
+      llvm::dbgs() << *module.get() << "\n\n";
+    });
+
     // Commit module for compilation to machine code. Actual compilation
     // happens on demand as soon as one of it's symbols is accessed. None of
     // the layers used here issue Errors from this call.
