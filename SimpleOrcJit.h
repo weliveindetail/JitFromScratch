@@ -4,10 +4,13 @@
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/NullResolver.h>
+#include <llvm/ExecutionEngine/Orc/OrcError.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/IR/Mangler.h>
 #include <llvm/Support/Debug.h>
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -41,6 +44,26 @@ public:
         CompileLayer.addModule(std::move(module), SymbolResolverPtr));
   }
 
+  template <class Signature_t>
+  llvm::Expected<std::function<Signature_t>> getFunction(std::string name) {
+    using namespace llvm;
+
+    // Find symbol name in committed modules.
+    std::string mangledName = mangle(std::move(name));
+    JITSymbol sym = CompileLayer.findSymbol(mangledName, false);
+    if (!sym)
+      return make_error<orc::JITSymbolNotFound>(mangledName);
+
+    // Access symbol address.
+    // Invokes compilation for the respective module if not compiled yet.
+    Expected<JITTargetAddress> addr = sym.getAddress();
+    if (!addr)
+      return addr.takeError();
+
+    auto typedFunctionPtr = reinterpret_cast<Signature_t *>(*addr);
+    return std::function<Signature_t>(typedFunctionPtr);
+  }
+
 private:
   llvm::DataLayout DL;
   std::shared_ptr<llvm::RTDyldMemoryManager> MemoryManagerPtr;
@@ -48,4 +71,12 @@ private:
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+
+  // System name mangler: may prepend '_' on OSX or '\x1' on Windows
+  std::string mangle(std::string name) {
+    std::string buffer;
+    llvm::raw_string_ostream ostream(buffer);
+    llvm::Mangler::getNameWithPrefix(ostream, std::move(name), DL);
+    return ostream.str();
+  }
 };
