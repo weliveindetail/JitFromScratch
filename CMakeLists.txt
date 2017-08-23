@@ -21,6 +21,7 @@ message(STATUS "System: ${OS_NAME}")
 
 add_executable(JitFromScratch
     JitFromScratch.cpp
+    SimpleOrcJit.h
 )
 
 set_target_properties(JitFromScratch PROPERTIES
@@ -55,7 +56,11 @@ target_compile_definitions(JitFromScratch PRIVATE
 # JitFromScratch dependencies
 llvm_map_components_to_libnames(LLVM_LIBS
     core
+    executionengine
     native
+    object
+    orcjit
+    runtimedyld
     support
 )
 
