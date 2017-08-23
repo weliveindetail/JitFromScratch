@@ -25,7 +25,7 @@ LLVM_ATTRIBUTE_NORETURN static void fatalError(llvm::Error E) {
   exit(1);
 }
 
-llvm::Expected<std::string> codegenIR(llvm::Module *module) {
+llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
   using namespace llvm;
 
   LLVMContext &ctx = module->getContext();
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
   module->setDataLayout(targetMachine->createDataLayout());
 
   // Generate LLVM IR for the function.
-  Expected<std::string> jitedFnName = codegenIR(module.get());
+  Expected<std::string> jitedFnName = codegenIR(module.get(), arrayElements(x));
   if (!jitedFnName)
     fatalError(jitedFnName.takeError());
 
