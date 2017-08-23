@@ -45,7 +45,9 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module) {
     auto argIt = fn->arg_begin();
     Argument &argX = *argIt;
     Argument &argY = *(++argIt);
-    Value *difference = Builder.CreateSub(&argX, &argY);
+    argX.setName("x");
+    argY.setName("y");
+    Value *difference = Builder.CreateSub(&argX, &argY, "dist");
     Builder.CreateRet(difference);
   }
 
