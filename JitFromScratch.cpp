@@ -35,8 +35,9 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
   auto voidTy = Type::getVoidTy(ctx);
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
+  auto intPtrPtrTy = intPtrTy->getPointerTo();
   auto signature =
-      FunctionType::get(voidTy, {intPtrTy, intPtrTy, intPtrTy}, false);
+      FunctionType::get(voidTy, {intPtrTy, intPtrTy, intPtrPtrTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -53,6 +54,8 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
     argPtrY.setName("y");
     argPtrOut.setName("result");
 
+    Value *results_ptr = Builder.CreateLoad(&argPtrOut);
+
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module->getOrInsertFunction("abs", absSig);
 
@@ -65,7 +68,7 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
       Value *difference = Builder.CreateSub(x0, y0);
       Value *absDifference = Builder.CreateCall(absFunction, {difference});
 
-      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, &argPtrOut, i);
+      Value *ri_ptr = Builder.CreateConstInBoundsGEP1_32(intTy, results_ptr, i);
       Builder.CreateStore(absDifference, ri_ptr);
     }
 
@@ -111,11 +114,11 @@ int *customIntAllocator(unsigned items) {
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
 int *integerDistances(const int (&x)[sizeOfArray], int *y,
-                      std::function<void(int *, int *, int *)> jitedFn) {
+                      std::function<void(int *, int *, int **)> jitedFn) {
   unsigned items = arrayElements(x);
   int *results = customIntAllocator(items);
 
-  jitedFn(const_cast<int *>(x), y, results);
+  jitedFn(const_cast<int *>(x), y, &results);
 
   return results;
 }
@@ -152,7 +155,7 @@ int main(int argc, char **argv) {
 
   // Compile to machine code and link.
   jit->submitModule(std::move(module));
-  auto jitedFn = jit->getFunction<void(int *, int *, int *)>(*jitedFnName);
+  auto jitedFn = jit->getFunction<void(int *, int *, int **)>(*jitedFnName);
   if (!jitedFn)
     fatalError(jitedFn.takeError());
 
