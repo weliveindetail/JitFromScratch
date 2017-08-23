@@ -11,6 +11,10 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
+// Hack: Let the JIT know about the external function, so it can do a simple
+// manual lookup.
+int *customIntAllocator(unsigned items);
+
 #include "SimpleOrcJit.h"
 
 // Show the error message and exit.
@@ -54,7 +58,12 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
     argPtrY.setName("y");
     argPtrOut.setName("result");
 
-    Value *results_ptr = Builder.CreateLoad(&argPtrOut);
+    auto allocSig = FunctionType::get(intPtrTy, {intTy}, false);
+    Value *allocFunction =
+        module->getOrInsertFunction("customIntAllocator", allocSig);
+
+    Value *results_size = ConstantInt::get(intTy, items);
+    Value *results_ptr = Builder.CreateCall(allocFunction, {results_size});
 
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module->getOrInsertFunction("abs", absSig);
@@ -72,6 +81,7 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
       Builder.CreateStore(absDifference, ri_ptr);
     }
 
+    Builder.CreateStore(results_ptr, &argPtrOut);
     Builder.CreateRetVoid();
   }
 
@@ -112,13 +122,11 @@ int *customIntAllocator(unsigned items) {
 }
 
 // This function will be replaced by a runtime-time compiled version.
-template <size_t sizeOfArray>
-int *integerDistances(const int (&x)[sizeOfArray], int *y,
+int *integerDistances(int *x, int *y,
                       std::function<void(int *, int *, int **)> jitedFn) {
-  unsigned items = arrayElements(x);
-  int *results = customIntAllocator(items);
+  int *results;
 
-  jitedFn(const_cast<int *>(x), y, &results);
+  jitedFn(x, y, &results);
 
   return results;
 }
