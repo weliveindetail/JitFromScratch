@@ -115,12 +115,6 @@ int *customIntAllocator(unsigned items) {
   return block;
 }
 
-// This function will be replaced by a runtime-time compiled version.
-int *integerDistances(int *x, int *y,
-                      std::function<int *(int *, int *)> jitedFn) {
-  return jitedFn(x, y);
-}
-
 int main(int argc, char **argv) {
   using namespace llvm;
 
@@ -157,7 +151,9 @@ int main(int argc, char **argv) {
   if (!jitedFn)
     fatalError(jitedFn.takeError());
 
-  int *z = integerDistances(x, y, *jitedFn);
+  // Invoke JITed function.
+  auto integerDistances = *jitedFn;
+  int *z = integerDistances(x, y);
 
   outs() << "Integer Distances: ";
   outs() << z[0] << ", " << z[1] << ", " << z[2] << "\n\n";
