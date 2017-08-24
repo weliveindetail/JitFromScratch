@@ -2,6 +2,7 @@
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+#include <llvm/ExecutionEngine/Orc/GlobalMappingLayer.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
 #include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
 #include <llvm/ExecutionEngine/Orc/OrcError.h>
@@ -23,6 +24,7 @@ class SimpleOrcJit {
 
   using ObjectLayer_t = llvm::orc::RTDyldObjectLinkingLayer;
   using CompileLayer_t = llvm::orc::IRCompileLayer<ObjectLayer_t, IRCompiler_t>;
+  using MappingLayer_t = llvm::orc::GlobalMappingLayer<CompileLayer_t>;
 
 public:
   SimpleOrcJit(llvm::TargetMachine &targetMachine)
@@ -32,7 +34,8 @@ public:
             [&](std::string name) { return findSymbolInJITedCode(name); },
             [&](std::string name) { return findSymbolInHostProcess(name); })),
         ObjectLayer([this]() { return MemoryManagerPtr; }),
-        CompileLayer(ObjectLayer, IRCompiler_t(targetMachine)) {
+        CompileLayer(ObjectLayer, IRCompiler_t(targetMachine)),
+        MappingLayer(CompileLayer) {
     // Load own executable as dynamic library.
     // Required for RTDyldMemoryManager::getSymbolAddressInProcess().
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
@@ -49,6 +52,11 @@ public:
     // the layers used here issue Errors from this call.
     llvm::cantFail(
         CompileLayer.addModule(std::move(module), SymbolResolverPtr));
+  }
+
+  template <class FunctionPtr_t>
+  void addExplicitFunctionMapping(std::string name, FunctionPtr_t *ptr) {
+    MappingLayer.setGlobalMapping(mangle(name), llvm::JITTargetAddress(ptr));
   }
 
   template <class Signature_t>
@@ -78,6 +86,7 @@ private:
 
   ObjectLayer_t ObjectLayer;
   CompileLayer_t CompileLayer;
+  MappingLayer_t MappingLayer;
 
   llvm::JITSymbol findSymbolInJITedCode(std::string mangledName) {
     constexpr bool exportedSymbolsOnly = false;
@@ -85,10 +94,10 @@ private:
   }
 
   llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) {
-    // Hack: Provide function pointer for dedicated externals.
-    if (mangledName == mangle("customIntAllocator"))
-      return llvm::JITSymbol(llvm::JITTargetAddress(&customIntAllocator),
-                             llvm::JITSymbolFlags::Exported);
+    // Prioritize explicit symbol mappings.
+    constexpr bool exportedSymbolsOnly = false;
+    if (auto Sym = MappingLayer.findSymbol(mangledName, exportedSymbolsOnly))
+      return Sym;
 
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr =
