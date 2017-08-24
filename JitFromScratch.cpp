@@ -11,10 +11,6 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
-// Hack: Let the JIT know about the external function, so it can do a simple
-// manual lookup.
-int *customIntAllocator(unsigned items);
-
 #include "SimpleOrcJit.h"
 
 // Show the error message and exit.
@@ -102,7 +98,7 @@ constexpr unsigned arrayElements(T (&)[sizeOfArray]) {
 }
 
 // This function will be called from JITed code.
-int *customIntAllocator(unsigned items) {
+DECL_JIT_ACCESS_C int *customIntAllocator(unsigned items) {
   static int memory[100];
   static unsigned allocIdx = 0;
 

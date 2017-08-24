@@ -17,6 +17,12 @@
 
 #define DEBUG_TYPE "jitfromscratch"
 
+#if _WIN32
+#define DECL_JIT_ACCESS_C extern "C" __declspec(dllexport)
+#else
+#define DECL_JIT_ACCESS_C extern "C"
+#endif
+
 class SimpleOrcJit {
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
   using IRCompiler_t = llvm::orc::SimpleCompiler;
@@ -85,11 +91,6 @@ private:
   }
 
   llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) {
-    // Hack: Provide function pointer for dedicated externals.
-    if (mangledName == mangle("customIntAllocator"))
-      return llvm::JITSymbol(llvm::JITTargetAddress(&customIntAllocator),
-                             llvm::JITSymbolFlags::Exported);
-
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr =
             llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName))
