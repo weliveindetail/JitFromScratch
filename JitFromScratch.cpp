@@ -49,9 +49,15 @@ llvm::Expected<std::string> codegenIR(llvm::Module *module, unsigned items) {
     argPtrX.setName("x");
     argPtrY.setName("y");
 
+#if _WIN32
+    const char *allocMangledName = "?customIntAllocator@@YAPEAHI@Z";
+#else
+    const char *allocMangledName = "_Z18customIntAllocatorj";
+#endif
+
     auto allocSig = FunctionType::get(intPtrTy, {intTy}, false);
     Value *allocFunction =
-        module->getOrInsertFunction("customIntAllocator", allocSig);
+        module->getOrInsertFunction(allocMangledName, allocSig);
 
     Value *results_size = ConstantInt::get(intTy, items);
     Value *results_ptr = Builder.CreateCall(allocFunction, {results_size});
@@ -98,7 +104,7 @@ constexpr unsigned arrayElements(T (&)[sizeOfArray]) {
 }
 
 // This function will be called from JITed code.
-DECL_JIT_ACCESS_C int *customIntAllocator(unsigned items) {
+DECL_JIT_ACCESS_CPP int *customIntAllocator(unsigned items) {
   static int memory[100];
   static unsigned allocIdx = 0;
 
