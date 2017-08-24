@@ -1,6 +1,8 @@
-# JitFromScratch / jit-debug / gdb-interface
+# JitFromScratch / llvm40 / jit-debug / gdb-interface
 
-[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=jit-debug/gdb-interface)](https://travis-ci.org/weliveindetail/JitFromScratch)
+[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm40/jit-debug/gdb-interface)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 4.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch/tree/jit-basics).**
 
 This branch shows how to implement the [GDB JIT Interface](https://sourceware.org/gdb/onlinedocs/gdb/JIT-Interface.html) for a ORC-based JIT compiler.
 
