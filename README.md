@@ -1,8 +1,8 @@
-# JitFromScratch / jit-from-source / cpp-clang
+# JitFromScratch / llvm40 / jit-from-source / cpp-clang
 
 This branch shows a simple way to compile C++ code at runtime using the Clang cc1 frontend tool. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in my blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
 
-The example uses almost the same code as was the basis for the [`jit-basics`](https://github.com/weliveindetail/JitFromScratch/tree/jit-basics) branch:
+The example uses almost the same code as was the basis for the [`jit-basics`](https://github.com/weliveindetail/JitFromScratch/tree/llvm40/jit-basics) branch:
 
 ```
 // Implementation of the integerDistances function.
