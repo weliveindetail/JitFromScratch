@@ -59,6 +59,16 @@ public:
     MappingLayer.setGlobalMapping(mangle(name), llvm::JITTargetAddress(ptr));
   }
 
+  void demoGlobalMappingSideEffect() {
+    DEBUG({
+      if (auto sym = findSymbolInHostProcess(mangle("integerDistance")))
+        llvm::dbgs() << "Found symbol 'integerDistance' by calling "
+                     << "'findSymbolInHostProcess()'\n"
+                     << "This is a side effect of using the GlobalMappingLayer."
+                     << "\n\n";
+    });
+  }
+
   template <class Signature_t>
   llvm::Expected<std::function<Signature_t>> getFunction(std::string name) {
     using namespace llvm;
