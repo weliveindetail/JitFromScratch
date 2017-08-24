@@ -1,6 +1,8 @@
-# JitFromScratch / jit-optimization
+# JitFromScratch / llvm40 / jit-optimization
 
-[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=jit-optimization)](https://travis-ci.org/weliveindetail/JitFromScratch)
+[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm40/jit-optimization)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 4.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch/tree/jit-basics).**
 
 This branch shows how to apply optimizations to JITed code in a ORC-based compiler and demonstrates how instruction ordering affects automatic vectorization.
 
