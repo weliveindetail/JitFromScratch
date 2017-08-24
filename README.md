@@ -1,6 +1,8 @@
-# JitFromScratch / jit-function-calls / implicit-extern-c 
+# JitFromScratch / llvm40 / jit-function-calls / implicit-extern-c 
 
-[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=jit-function-calls/implicit-extern-c)](https://travis-ci.org/weliveindetail/JitFromScratch)
+[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm40/jit-function-calls/implicit-extern-c)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 4.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch/tree/jit-basics).**
 
 This branch shows how to declare a function as `extern "C"` and call it from JITed code. For `extern "C"` functions only the system mangling scheme is applied, so they can easily be resolved by their raw name from the symbol table of the host executable. This happens automatically in the ObjectLayer while linking.
 
