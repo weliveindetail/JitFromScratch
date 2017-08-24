@@ -57,11 +57,13 @@ target_compile_definitions(JitFromScratch PRIVATE
 llvm_map_components_to_libnames(LLVM_LIBS
     core
     executionengine
+    ipo
     native
     object
     orcjit
     runtimedyld
     support
+    transformutils
 )
 
 target_link_libraries(JitFromScratch PRIVATE
