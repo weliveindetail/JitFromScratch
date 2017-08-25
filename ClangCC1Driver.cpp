@@ -3,6 +3,14 @@
 // Hack: cc1 lives in "tools" next to "include"
 #include <../tools/driver/cc1_main.cpp>
 
+#if _WIN32
+#include "ClangCC1Args_Win.h"
+#elif __APPLE__
+#include "ClangCC1Args_OSX.h"
+#elif __linux__
+#include "ClangCC1Args_Linux.h"
+#endif
+
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -79,7 +87,7 @@ ClangCC1Driver::compileTranslationUnit(std::string cppCode,
   std::string cpp = *sourceFileName;
   std::string bc = replaceExtension(cpp, "bc");
 
-  llvm::Error err = compileCppToBitcodeFile({});
+  llvm::Error err = compileCppToBitcodeFile(getClangCC1Args(cpp, bc));
   if (err)
     return std::move(err);
 

@@ -24,6 +24,7 @@ add_executable(JitFromScratch
     SimpleOrcJit.h
     ClangCC1Driver.cpp
     ClangCC1Driver.h
+    ClangCC1Args_${OS_NAME}.h
 )
 
 set_target_properties(JitFromScratch PROPERTIES
