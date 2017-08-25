@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ClangCC1Driver.h"
+
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
@@ -57,6 +59,11 @@ public:
         CompileLayer.addModule(std::move(module), SymbolResolverPtr));
   }
 
+  llvm::Expected<std::unique_ptr<llvm::Module>>
+  compileModuleFromCpp(std::string cppCode, llvm::LLVMContext &context) {
+    return ClangDriver.compileTranslationUnit(cppCode, context);
+  }
+
   template <class Signature_t>
   llvm::Expected<std::function<Signature_t>> getFunction(std::string name) {
     using namespace llvm;
@@ -79,6 +86,7 @@ public:
 
 private:
   llvm::DataLayout DL;
+  ClangCC1Driver ClangDriver;
   std::shared_ptr<llvm::RTDyldMemoryManager> MemoryManagerPtr;
   std::shared_ptr<llvm::JITSymbolResolver> SymbolResolverPtr;
 
