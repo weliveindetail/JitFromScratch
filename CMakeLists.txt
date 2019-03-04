@@ -38,6 +38,7 @@ endif()
 
 add_executable(JitFromScratch
   main.cpp
+  JitFromScratch.cpp
 )
 
 target_include_directories(JitFromScratch PRIVATE
@@ -48,6 +49,7 @@ target_include_directories(JitFromScratch PRIVATE
 set(llvm_libs
   LLVMAggressiveInstCombine
   LLVMAnalysis
+  LLVMAsmParser
   LLVMAsmPrinter
   LLVMBinaryFormat
   LLVMBitReader
@@ -59,14 +61,21 @@ set(llvm_libs
   LLVMDebugInfoDWARF
   LLVMDebugInfoMSF
   LLVMDemangle
+  LLVMExecutionEngine
   LLVMGlobalISel
   LLVMInstCombine
+  LLVMInstrumentation
+  LLVMJITLink
+  LLVMLinker
+  LLVMIRReader
   LLVMMC
   LLVMMCDisassembler
   LLVMMCParser
   LLVMObject
+  LLVMOrcJIT
   LLVMProfileData
   LLVMRemarks
+  LLVMRuntimeDyld
   LLVMScalarOpts
   LLVMSelectionDAG
   LLVMSupport
