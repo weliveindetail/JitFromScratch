@@ -9,7 +9,30 @@ using namespace llvm;
 using namespace llvm::orc;
 
 JitFromScratch::JitFromScratch(std::unique_ptr<TargetMachine> TM, DataLayout DL)
-    : LLJIT(std::make_unique<ExecutionSession>(), std::move(TM), DL) {}
+    : LLJIT(std::make_unique<ExecutionSession>(), std::move(TM), DL) {
+  if (auto R = createHostProcessResolver(DL))
+    Main.setGenerator(std::move(R));
+}
+
+JITDylib::GeneratorFunction
+JitFromScratch::createHostProcessResolver(DataLayout DL) {
+  Expected<JITDylib::GeneratorFunction> R =
+      DynamicLibrarySearchGenerator::GetForCurrentProcess(DL);
+
+  if (!R) {
+    ES->reportError(R.takeError());
+    return nullptr;
+  }
+
+  if (!*R) {
+    ES->reportError(createStringError(
+        inconvertibleErrorCode(),
+        "Generator function for host process symbols must not be null"));
+    return nullptr;
+  }
+
+  return *R;
+}
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
                                    std::unique_ptr<LLVMContext> C) {

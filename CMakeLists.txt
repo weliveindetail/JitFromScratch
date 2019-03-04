@@ -84,6 +84,10 @@ target_compile_definitions(JitFromScratch PRIVATE ${LLVM_DEFINITIONS})
 target_link_libraries(JitFromScratch PRIVATE ${llvm_libs})
 target_compile_options(JitFromScratch PRIVATE ${cxx_flags} ${rtti_flags})
 
+# Allow dlopen() to access exported symbols.
+# This will add linker flags like -Wl,--export-dynamic -rdynamic
+export_executable_symbols(JitFromScratch)
+
 function(dump_target_properties target property)
   get_target_property(values ${target} ${property})
   if(values)
