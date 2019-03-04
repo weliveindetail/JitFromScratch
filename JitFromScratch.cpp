@@ -20,3 +20,16 @@ Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
   return LLJIT->addIRModule(ThreadSafeModule(std::move(M), std::move(C)));
 }
+
+Expected<JITTargetAddress> JitFromScratch::getFunctionAddr(StringRef Name) {
+  Expected<JITEvaluatedSymbol> S = LLJIT->lookup(Name);
+  if (!S)
+    return S.takeError();
+
+  JITTargetAddress A = S->getAddress();
+  if (!A)
+    return createStringError(inconvertibleErrorCode(),
+                             "'%s' evaluated to nullptr", Name.data());
+
+  return A;
+}
