@@ -26,10 +26,9 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
 
-  auto name = "substract";
-  auto returnTy = Type::getInt32Ty(ctx);
-  auto argTy = Type::getInt32Ty(ctx);
-  auto signature = FunctionType::get(returnTy, {argTy, argTy}, false);
+  auto name = "abssub";
+  auto intTy = Type::getInt32Ty(ctx);
+  auto signature = FunctionType::get(intTy, {intTy, intTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -42,7 +41,11 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
     argY->setName("y");
     Value *difference = B.CreateSub(argX, argY, "dist");
 
-    B.CreateRet(difference);
+    auto absSig = FunctionType::get(intTy, {intTy}, false);
+    Value *absFunction = module.getOrInsertFunction("abs", absSig);
+    Value *absDifference = B.CreateCall(absFunction, {difference});
+
+    B.CreateRet(absDifference);
   }
 
   std::string buffer;
@@ -81,8 +84,11 @@ int *customIntAllocator(unsigned items) {
   return block;
 }
 
+// Also called from JITed code; make sure it's available.
+extern "C" int abs(int);
+
 // Temporary global variable to replace below function step-by-step.
-std::function<int(int, int)> substract;
+std::function<int(int, int)> abssub;
 
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
@@ -91,7 +97,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
   int *results = customIntAllocator(items);
 
   for (int i = 0; i < items; i++) {
-    results[i] = abs(substract(x[i], y[i]));
+    results[i] = abssub(x[i], y[i]);
   }
 
   return results;
@@ -129,7 +135,7 @@ int main(int argc, char **argv) {
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.
-  substract = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
+  abssub = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
 
   int *z = integerDistances(x, y);
 
