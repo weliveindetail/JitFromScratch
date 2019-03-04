@@ -1,7 +1,14 @@
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/Support/Format.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
+
+#include <memory>
+
+#include "JitFromScratch.h"
 
 using namespace llvm;
 
@@ -47,6 +54,12 @@ int main(int argc, char **argv) {
 
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
+
+  std::unique_ptr<TargetMachine> TM(EngineBuilder().selectTarget());
+  DataLayout DL = TM->createDataLayout();
+
+  JitFromScratch Jit(std::move(TM), DL);
+
   int *z = integerDistances(x, y);
 
   outs() << format("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
