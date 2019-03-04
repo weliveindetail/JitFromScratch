@@ -2,6 +2,8 @@
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Debug.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
 #include <llvm/Support/InitLLVM.h>
@@ -11,6 +13,8 @@
 #include <memory>
 
 #include "JitFromScratch.h"
+
+#define DEBUG_TYPE "jitfromscratch"
 
 using namespace llvm;
 
@@ -61,10 +65,16 @@ int main(int argc, char **argv) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
+  // Parse implicit -debug and -debug-only options.
+  cl::ParseCommandLineOptions(argc, argv, "JitFromScratch example project\n");
+
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
 
   JitFromScratch Jit(ExitOnErr);
+
+  LLVM_DEBUG(dbgs() << "JITing for host target: "
+                    << Jit.getTargetTriple().normalize() << "\n\n");
 
   auto C = std::make_unique<LLVMContext>();
   auto M = std::make_unique<Module>("JitFromScratch", *C);

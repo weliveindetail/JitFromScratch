@@ -1,5 +1,6 @@
 #pragma once
 
+#include <llvm/ADT/Triple.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/LLVMContext.h>
@@ -22,8 +23,13 @@ public:
     return LLJIT->getDataLayout();
   }
 
+  const llvm::Triple &getTargetTriple() const {
+    return TT;
+  }
+
   llvm::Error submitModule(std::unique_ptr<llvm::Module> M,
                            std::unique_ptr<llvm::LLVMContext> C);
 private:
   std::unique_ptr<llvm::orc::LLJIT> LLJIT;
+  llvm::Triple TT;
 };
