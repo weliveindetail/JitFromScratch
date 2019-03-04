@@ -1,0 +1,11 @@
+# Check that output from LLVM_DEBUG is printed in Debug mode (dumps to stderr)
+# RUN: JitFromScratch -debug -debug-only=jitfromscratch 2>&1 | FileCheck %s
+
+# CHECK: JITing for host target: {{.*}}
+# CHECK-EMPTY:
+# CHECK-NEXT: Submit IR module:
+# CHECK-EMPTY:
+# CHECK-NEXT: ; ModuleID = 'JitFromScratch'
+# CHECK-NEXT: source_filename = "JitFromScratch"
+
+# CHECK: Integer Distances: 3, 0, 3

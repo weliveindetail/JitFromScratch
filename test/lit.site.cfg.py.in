@@ -6,6 +6,7 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.jitfromscratch_build_dir = "@CMAKE_BINARY_DIR@/@CMAKE_CFG_INTDIR@"
+config.build_type = "@CMAKE_BUILD_TYPE@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
