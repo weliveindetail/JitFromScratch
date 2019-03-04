@@ -37,7 +37,10 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   {
     Argument *argX = fn->arg_begin();
     Argument *argY = fn->arg_begin() + 1;
-    Value *difference = B.CreateSub(argX, argY);
+    argX->setName("x");
+    argY->setName("y");
+    Value *difference = B.CreateSub(argX, argY, "dist");
+
     B.CreateRet(difference);
   }
 
