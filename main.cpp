@@ -1,7 +1,14 @@
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include <memory>
+
+#include "JitFromScratch.h"
 
 using namespace llvm;
 
@@ -41,12 +48,18 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
+  ExitOnError ExitOnErr;
+  ExitOnErr.setBanner("JitFromScratch: ");
+
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
+
+  JitFromScratch Jit(ExitOnErr);
+
   int *z = integerDistances(x, y);
 
   outs() << format("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
