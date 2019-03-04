@@ -111,12 +111,16 @@ int main(int argc, char **argv) {
   auto M = std::make_unique<Module>("JitFromScratch", *C);
   M->setDataLayout(DL);
 
-  ExitOnErr(codegenIR(*M, arrayElements(x)));
+  std::string JitedFnName = ExitOnErr(codegenIR(*M, arrayElements(x)));
 
   JitFromScratch Jit(std::move(TM), DL);
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
+  // Request function; this compiles to machine code and links.
+  auto getZero = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
+
   int *z = integerDistances(x, y);
+  z[1] = getZero(0, 0);
 
   outs() << format("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
   outs().flush();
