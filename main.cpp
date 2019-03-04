@@ -1,5 +1,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
 #include <llvm/Support/InitLLVM.h>
@@ -11,6 +13,10 @@
 #include "JitFromScratch.h"
 
 using namespace llvm;
+
+Expected<std::string> codegenIR(Module &module, unsigned items) {
+  return "todo";
+}
 
 // Determine the size of a C array at compile-time.
 template <typename T, size_t sizeOfArray>
@@ -59,6 +65,13 @@ int main(int argc, char **argv) {
   int y[]{3, 1, -1};
 
   JitFromScratch Jit(ExitOnErr);
+
+  auto C = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("JitFromScratch", *C);
+  M->setDataLayout(Jit.getDataLayout());
+
+  ExitOnErr(codegenIR(*M, arrayElements(x)));
+  ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   int *z = integerDistances(x, y);
 
