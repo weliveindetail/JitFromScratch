@@ -1,6 +1,9 @@
 #include "JitFromScratch.h"
 
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+#include <llvm/Support/Debug.h>
+
+#define DEBUG_TYPE "jitfromscratch"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -10,5 +13,6 @@ JitFromScratch::JitFromScratch(std::unique_ptr<TargetMachine> TM, DataLayout DL)
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
                                    std::unique_ptr<LLVMContext> C) {
+  LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
   return addIRModule(ThreadSafeModule(std::move(M), std::move(C)));
 }

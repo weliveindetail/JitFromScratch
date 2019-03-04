@@ -102,8 +102,13 @@ dump_target_properties(JitFromScratch LINK_FLAGS)
 message("")
 message("Configure TARGET run")
 
+# Only LLVM Debug builds can parse debug arguments
+if(${LLVM_BUILD_TYPE} STREQUAL "Debug" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(debug_args -debug -debug-only=jitfromscratch)
+endif()
+
 add_custom_target(run
-  COMMAND "$<TARGET_FILE:JitFromScratch>"
+  COMMAND "$<TARGET_FILE:JitFromScratch>" ${debug_args}
   COMMENT "Running JitFromScratch"
 )
 
