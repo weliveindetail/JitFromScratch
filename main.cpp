@@ -13,6 +13,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 
+#include <functional>
 #include <memory>
 
 #include "JitFromScratch.h"
@@ -25,7 +26,7 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
 
-  auto name = "getZero";
+  auto name = "substract";
   auto returnTy = Type::getInt32Ty(ctx);
   auto argTy = Type::getInt32Ty(ctx);
   auto signature = FunctionType::get(returnTy, {argTy, argTy}, false);
@@ -34,7 +35,12 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   auto fn = Function::Create(signature, linkage, name, module);
 
   B.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
-  B.CreateRet(ConstantInt::get(returnTy, 0));
+  {
+    Argument *argX = fn->arg_begin();
+    Argument *argY = fn->arg_begin() + 1;
+    Value *difference = B.CreateSub(argX, argY);
+    B.CreateRet(difference);
+  }
 
   std::string buffer;
   raw_string_ostream es(buffer);
@@ -72,6 +78,9 @@ int *customIntAllocator(unsigned items) {
   return block;
 }
 
+// Temporary global variable to replace below function step-by-step.
+std::function<int(int, int)> substract;
+
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
 int *integerDistances(const int (&x)[sizeOfArray], int *y) {
@@ -79,7 +88,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
   int *results = customIntAllocator(items);
 
   for (int i = 0; i < items; i++) {
-    results[i] = abs(x[i] - y[i]);
+    results[i] = abs(substract(x[i], y[i]));
   }
 
   return results;
@@ -117,10 +126,9 @@ int main(int argc, char **argv) {
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.
-  auto getZero = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
+  substract = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
 
   int *z = integerDistances(x, y);
-  z[1] = getZero(0, 0);
 
   outs() << format("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
   outs().flush();
