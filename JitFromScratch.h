@@ -46,5 +46,8 @@ private:
   std::unique_ptr<llvm::orc::LLJIT> LLJIT;
   llvm::Triple TT;
 
+  llvm::orc::JITDylib::GeneratorFunction
+  createHostProcessResolver(llvm::DataLayout DL);
+
   llvm::Expected<llvm::JITTargetAddress> getFunctionAddr(llvm::StringRef Name);
 };

@@ -13,6 +13,30 @@ JitFromScratch::JitFromScratch(ExitOnError ExitOnErr) {
   ExitOnErr(Builder.prepareForConstruction());
   TT = Builder.JTMB->getTargetTriple();
   LLJIT = ExitOnErr(Builder.create());
+
+  if (auto R = createHostProcessResolver(LLJIT->getDataLayout()))
+    LLJIT->getMainJITDylib().setGenerator(std::move(R));
+}
+
+JITDylib::GeneratorFunction
+JitFromScratch::createHostProcessResolver(DataLayout DL) {
+  char Prefix = DL.getGlobalPrefix();
+  Expected<JITDylib::GeneratorFunction> R =
+      DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix);
+
+  if (!R) {
+    LLJIT->getExecutionSession().reportError(R.takeError());
+    return nullptr;
+  }
+
+  if (!*R) {
+    LLJIT->getExecutionSession().reportError(createStringError(
+        inconvertibleErrorCode(),
+        "Generator function for host process symbols must not be null"));
+    return nullptr;
+  }
+
+  return *R;
 }
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
