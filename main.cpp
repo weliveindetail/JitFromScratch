@@ -1,7 +1,9 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Error.h>
@@ -19,7 +21,21 @@
 using namespace llvm;
 
 Expected<std::string> codegenIR(Module &module, unsigned items) {
-  return "todo";
+  LLVMContext &ctx = module.getContext();
+  IRBuilder<> B(ctx);
+
+  auto name = "getZero";
+  auto returnTy = Type::getInt32Ty(ctx);
+  auto argTy = Type::getInt32Ty(ctx);
+  auto signature = FunctionType::get(returnTy, {argTy, argTy}, false);
+  auto linkage = Function::ExternalLinkage;
+
+  auto fn = Function::Create(signature, linkage, name, module);
+
+  B.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
+  B.CreateRet(ConstantInt::get(returnTy, 0));
+
+  return name;
 }
 
 // Determine the size of a C array at compile-time.
