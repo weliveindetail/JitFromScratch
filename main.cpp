@@ -1,5 +1,8 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/TargetSelect.h>
@@ -11,6 +14,10 @@
 #include "JitFromScratch.h"
 
 using namespace llvm;
+
+Expected<std::string> codegenIR(Module &module, unsigned items) {
+  return "todo";
+}
 
 // Determine the size of a C array at compile-time.
 template <typename T, size_t sizeOfArray>
@@ -48,6 +55,9 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
+  ExitOnError ExitOnErr;
+  ExitOnErr.setBanner("JitFromScratch: ");
+
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
@@ -58,7 +68,14 @@ int main(int argc, char **argv) {
   std::unique_ptr<TargetMachine> TM(EngineBuilder().selectTarget());
   DataLayout DL = TM->createDataLayout();
 
+  auto C = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("JitFromScratch", *C);
+  M->setDataLayout(DL);
+
+  ExitOnErr(codegenIR(*M, arrayElements(x)));
+
   JitFromScratch Jit(std::move(TM), DL);
+  ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   int *z = integerDistances(x, y);
 
