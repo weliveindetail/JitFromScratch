@@ -35,6 +35,19 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   B.SetInsertPoint(BasicBlock::Create(ctx, "entry", fn));
   B.CreateRet(ConstantInt::get(returnTy, 0));
 
+  std::string buffer;
+  raw_string_ostream es(buffer);
+
+  if (verifyFunction(*fn, &es))
+    return createStringError(inconvertibleErrorCode(),
+                             "Function verification failed: %s",
+                             es.str().c_str());
+
+  if (verifyModule(module, &es))
+    return createStringError(inconvertibleErrorCode(),
+                             "Module verification failed: %s",
+                             es.str().c_str());
+
   return name;
 }
 
