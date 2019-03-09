@@ -26,9 +26,10 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
 
-  auto name = "abssub";
+  auto name = "forabssub";
   auto intTy = Type::getInt32Ty(ctx);
-  auto signature = FunctionType::get(intTy, {intTy, intTy}, false);
+  auto intPtrTy = intTy->getPointerTo();
+  auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy, intPtrTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -37,15 +38,28 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   {
     Argument *argX = fn->arg_begin();
     Argument *argY = fn->arg_begin() + 1;
-    argX->setName("x");
-    argY->setName("y");
-    Value *difference = B.CreateSub(argX, argY, "dist");
+    Argument *argR = fn->arg_begin() + 2;
+    argX->setName("xs_ptr");
+    argY->setName("ys_ptr");
+    argR->setName("rs_ptr");
 
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     Value *absFunction = module.getOrInsertFunction("abs", absSig);
-    Value *absDifference = B.CreateCall(absFunction, {difference});
 
-    B.CreateRet(absDifference);
+    for (unsigned int i = 0; i < items; i++) {
+      Value *xi_ptr = B.CreateConstInBoundsGEP1_32(intTy, argX, i, "x_ptr");
+      Value *yi_ptr = B.CreateConstInBoundsGEP1_32(intTy, argY, i, "y_ptr");
+
+      Value *xi = B.CreateLoad(xi_ptr, "x");
+      Value *yi = B.CreateLoad(yi_ptr, "y");
+      Value *difference = B.CreateSub(xi, yi, "diff");
+      Value *absDifference = B.CreateCall(absFunction, {difference}, "dist");
+
+      Value *ri_ptr = B.CreateConstInBoundsGEP1_32(intTy, argR, i, "r_ptr");
+      B.CreateStore(absDifference, ri_ptr);
+    }
+
+    B.CreateRet(argR);
   }
 
   std::string buffer;
@@ -88,7 +102,7 @@ int *customIntAllocator(unsigned items) {
 extern "C" int abs(int);
 
 // Temporary global variable to replace below function step-by-step.
-std::function<int(int, int)> abssub;
+std::function<int* (int *, int *, int *)> forabssub;
 
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
@@ -96,9 +110,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
   unsigned items = arrayElements(x);
   int *results = customIntAllocator(items);
 
-  for (int i = 0; i < items; i++) {
-    results[i] = abssub(x[i], y[i]);
-  }
+  results = forabssub((int *)x, y, results);
 
   return results;
 }
@@ -135,7 +147,7 @@ int main(int argc, char **argv) {
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.
-  abssub = ExitOnErr(Jit.getFunction<int(int, int)>(JitedFnName));
+  forabssub = ExitOnErr(Jit.getFunction<int *(int *, int *, int *)>(JitedFnName));
 
   int *z = integerDistances(x, y);
 
