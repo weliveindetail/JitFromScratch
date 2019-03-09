@@ -25,10 +25,10 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
 
-  auto name = "forabssub";
+  auto name = "allocforabssub";
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
-  auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy, intPtrTy}, false);
+  auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy}, false);
   auto linkage = Function::ExternalLinkage;
 
   auto fn = Function::Create(signature, linkage, name, module);
@@ -37,13 +37,18 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   {
     Argument *argX = fn->arg_begin();
     Argument *argY = fn->arg_begin() + 1;
-    Argument *argR = fn->arg_begin() + 2;
     argX->setName("xs_ptr");
     argY->setName("ys_ptr");
-    argR->setName("rs_ptr");
 
     auto absSig = FunctionType::get(intTy, {intTy}, false);
     FunctionCallee absFunction = module.getOrInsertFunction("abs", absSig);
+
+    auto allocSig = FunctionType::get(intPtrTy, {intTy}, false);
+    FunctionCallee allocFunction =
+        module.getOrInsertFunction("customIntAllocator", allocSig);
+
+    Value *rs_count = ConstantInt::get(intTy, items);
+    Value *rs_ptr = B.CreateCall(allocFunction, {rs_count}, "rs_ptr");
 
     for (unsigned int i = 0; i < items; i++) {
       Value *xi_ptr = B.CreateConstInBoundsGEP1_32(intTy, argX, i, "x_ptr");
@@ -54,11 +59,11 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
       Value *difference = B.CreateSub(xi, yi, "diff");
       Value *absDifference = B.CreateCall(absFunction, {difference}, "dist");
 
-      Value *ri_ptr = B.CreateConstInBoundsGEP1_32(intTy, argR, i, "r_ptr");
+      Value *ri_ptr = B.CreateConstInBoundsGEP1_32(intTy, rs_ptr, i, "ri_ptr");
       B.CreateStore(absDifference, ri_ptr);
     }
 
-    B.CreateRet(argR);
+    B.CreateRet(rs_ptr);
   }
 
   std::string buffer;
@@ -84,7 +89,7 @@ constexpr unsigned arrayElements(T (&)[sizeOfArray]) {
 }
 
 // This function will be called from JITed code.
-int *customIntAllocator(unsigned items) {
+extern "C" int *customIntAllocator(unsigned items) {
   static int memory[100];
   static unsigned allocIdx = 0;
 
@@ -101,7 +106,7 @@ int *customIntAllocator(unsigned items) {
 extern "C" int abs(int);
 
 // Temporary global variable to replace below function step-by-step.
-std::function<int* (int *, int *, int *)> forabssub;
+std::function<int* (int *, int *)> allocforabssub;
 
 // This function will be replaced by a runtime-time compiled version.
 template <size_t sizeOfArray>
@@ -109,7 +114,7 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
   unsigned items = arrayElements(x);
   int *results = customIntAllocator(items);
 
-  results = forabssub((int *)x, y, results);
+  results = allocforabssub((int *)x, y);
 
   return results;
 }
@@ -143,7 +148,7 @@ int main(int argc, char **argv) {
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.
-  forabssub = ExitOnErr(Jit.getFunction<int *(int *, int *, int *)>(JitedFnName));
+  allocforabssub = ExitOnErr(Jit.getFunction<int *(int *, int *)>(JitedFnName));
 
   int *z = integerDistances(x, y);
 
