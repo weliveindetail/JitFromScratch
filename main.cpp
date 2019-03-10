@@ -25,7 +25,7 @@ Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
 
-  auto name = "allocforabssub";
+  auto name = "integerDistances";
   auto intTy = Type::getInt32Ty(ctx);
   auto intPtrTy = intTy->getPointerTo();
   auto signature = FunctionType::get(intPtrTy, {intPtrTy, intPtrTy}, false);
@@ -105,20 +105,6 @@ extern "C" int *customIntAllocator(unsigned items) {
 // Also called from JITed code; make sure it's available.
 extern "C" int abs(int);
 
-// Temporary global variable to replace below function step-by-step.
-std::function<int* (int *, int *)> allocforabssub;
-
-// This function will be replaced by a runtime-time compiled version.
-template <size_t sizeOfArray>
-int *integerDistances(const int (&x)[sizeOfArray], int *y) {
-  unsigned items = arrayElements(x);
-  int *results = customIntAllocator(items);
-
-  results = allocforabssub((int *)x, y);
-
-  return results;
-}
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -148,7 +134,8 @@ int main(int argc, char **argv) {
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.
-  allocforabssub = ExitOnErr(Jit.getFunction<int *(int *, int *)>(JitedFnName));
+  auto integerDistances =
+      ExitOnErr(Jit.getFunction<int *(int *, int *)>(JitedFnName));
 
   int *z = integerDistances(x, y);
 
