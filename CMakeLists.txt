@@ -45,6 +45,10 @@ if(LLVM_ENABLE_RTTI)
   set(rtti_flags) # Clearing the default flags enables RTTI.
 endif()
 
+# Import extra CMake helpers from LLVM
+list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+include(AddLLVM)
+
 message("")
 message("Configure TARGET JitFromScratch")
 
@@ -101,3 +105,6 @@ add_custom_target(run
 add_dependencies(run JitFromScratch)
 
 message("")
+message("Configure TARGET check")
+
+add_subdirectory(test)

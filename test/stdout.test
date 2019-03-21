@@ -1,0 +1,3 @@
+# Check that integer distances are printed as expected
+# RUN: JitFromScratch | FileCheck %s
+# CHECK: Integer Distances: 3, 0, 3
