@@ -1,0 +1,9 @@
+dist: xenial
+language: c++
+
+services:
+  - docker
+
+script:
+  - docker pull weliveindetail/jitfromscratch:llvm08-test-debug
+  - docker run -e CHECKOUT=$(git rev-parse HEAD) weliveindetail/jitfromscratch:llvm08-test-debug
