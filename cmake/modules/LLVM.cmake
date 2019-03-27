@@ -7,7 +7,7 @@ else()
     "-DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm to CMake.")
 endif()
 
-find_package(LLVM 9.0 REQUIRED)
+find_package(LLVM 9.0 REQUIRED HINTS /usr/local/opt/llvm/lib/cmake/llvm)
 message(STATUS "LLVM Package version: ${LLVM_PACKAGE_VERSION}")
 
 if(LLVM_BUILD_MAIN_SRC_DIR)
