@@ -1,4 +1,6 @@
 #include <llvm/Support/Format.h>
+#include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
@@ -37,6 +39,12 @@ int *integerDistances(const int (&x)[sizeOfArray], int *y) {
 }
 
 int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
+
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
+
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
   int *z = integerDistances(x, y);
