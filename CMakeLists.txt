@@ -71,6 +71,7 @@ target_include_directories(JitFromScratch PRIVATE
 # Resolve static libraries from component names.
 llvm_map_components_to_libnames(llvm_libs
   core
+  native
   support
 )
 
