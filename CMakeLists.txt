@@ -46,11 +46,37 @@ target_include_directories(JitFromScratch PRIVATE
 )
 
 set(llvm_libs
+  LLVMAggressiveInstCombine
+  LLVMAnalysis
+  LLVMAsmPrinter
   LLVMBinaryFormat
+  LLVMBitReader
+  LLVMBitWriter
+  LLVMBitstreamReader
+  LLVMCodeGen
   LLVMCore
+  LLVMDebugInfoCodeView
+  LLVMDebugInfoDWARF
+  LLVMDebugInfoMSF
   LLVMDemangle
+  LLVMGlobalISel
+  LLVMInstCombine
+  LLVMMC
+  LLVMMCDisassembler
+  LLVMMCParser
+  LLVMObject
+  LLVMProfileData
   LLVMRemarks
+  LLVMScalarOpts
+  LLVMSelectionDAG
   LLVMSupport
+  LLVMTarget
+  LLVMTransformUtils
+  LLVMX86AsmParser
+  LLVMX86CodeGen
+  LLVMX86Desc
+  LLVMX86Info
+  LLVMX86Utils
 )
 
 separate_arguments(LLVM_DEFINITIONS)
