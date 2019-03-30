@@ -1,0 +1,25 @@
+{
+  "LLVM": {
+    "default": "LLVM 8.0",
+    "choices": {
+      "LLVM 8.0": {
+        "short": "LLVM 8.0",
+        "long": "LLVM Release 8.0",
+        "settings": {
+          "LLVM_DIR": "/path/to/llvm-build/lib/cmake/llvm"
+        }
+      }
+    }
+  },
+  "buildType": {
+    "default": "debug",
+    "choices": {
+      "debug": {
+        "short": "Debug",
+        "long": "Compile in debug mode",
+        "buildType": "Debug",
+        "linkage": "static"
+      }
+    }
+  }
+}
