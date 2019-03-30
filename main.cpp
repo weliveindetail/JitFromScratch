@@ -5,7 +5,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
-#include <llvm/Support/CodeGen.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
@@ -22,6 +21,26 @@
 #define DEBUG_TYPE "jitfromscratch"
 
 using namespace llvm;
+
+cl::opt<char>
+    OptLevel("O",
+        cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                  "(default = '-O2')"),
+        cl::Prefix, cl::ZeroOrMore, cl::init(' '));
+
+Expected<unsigned> getOptLevel() {
+  switch (OptLevel) {
+    case '0': return 0;
+    case '1': return 1;
+    case ' ':
+    case '2': return 2;
+    case '3': return 3;
+    default:
+      return createStringError(inconvertibleErrorCode(),
+                               "Invalid optimization level: -O%c",
+                               (char)OptLevel);
+  }
+}
 
 Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
@@ -124,19 +143,18 @@ int main(int argc, char **argv) {
   int y[]{3, 1, -1};
 
   std::unique_ptr<TargetMachine> TM(EngineBuilder().selectTarget());
-  DataLayout DL = TM->createDataLayout();
 
   LLVM_DEBUG(dbgs() << "JITing for host target: "
                     << TM->getTargetTriple().normalize() << "\n\n");
 
   auto C = std::make_unique<LLVMContext>();
   auto M = std::make_unique<Module>("JitFromScratch", *C);
-  M->setDataLayout(DL);
 
   std::string JitedFnName = ExitOnErr(codegenIR(*M, arrayElements(x)));
+  unsigned OptLevel = ExitOnErr(getOptLevel());
 
   JitFromScratch Jit(std::move(TM));
-  ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
+  ExitOnErr(Jit.submitModule(std::move(M), std::move(C), OptLevel));
 
   // Request function; this compiles to machine code and links.
   auto integerDistances =

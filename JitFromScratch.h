@@ -29,7 +29,8 @@ public:
   JitFromScratch &operator=(JitFromScratch &&) = delete;
 
   llvm::Error submitModule(std::unique_ptr<llvm::Module> M,
-                           std::unique_ptr<llvm::LLVMContext> C);
+                           std::unique_ptr<llvm::LLVMContext> C,
+                           unsigned OptLevel);
 
   template <class Signature_t>
   llvm::Expected<std::function<Signature_t>> getFunction(llvm::StringRef Name) {
@@ -47,6 +48,7 @@ private:
 
   llvm::orc::RTDyldObjectLinkingLayer ObjLinkingLayer;
   llvm::orc::IRCompileLayer CompileLayer;
+  llvm::orc::IRTransformLayer OptimizeLayer;
 
   llvm::orc::JITDylib::GeneratorFunction createHostProcessResolver();
 
