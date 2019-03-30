@@ -1,4 +1,5 @@
 #include "JitFromScratch.h"
+#include "SimpleOptimizer.h"
 
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
@@ -7,6 +8,7 @@
 #include <llvm/IR/Mangler.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 #define DEBUG_TYPE "jitfromscratch"
 
@@ -18,7 +20,8 @@ JitFromScratch::JitFromScratch(ExitOnError ExitOnErr)
       TM(createTargetMachine(ExitOnErr)),
       GDBListener(JITEventListener::createGDBRegistrationListener()),
       ObjLinkingLayer(*ES, createMemoryManagerFtor()),
-      CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*TM)) {
+      CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*TM)),
+      OptimizeLayer(*ES, CompileLayer) {
   ObjLinkingLayer.setNotifyLoaded(createNotifyLoadedFtor());
   if (auto R = createHostProcessResolver())
     ES->getMainJITDylib().setGenerator(std::move(R));
@@ -90,15 +93,18 @@ Error JitFromScratch::applyDataLayout(Module &M) {
 }
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
-                                   std::unique_ptr<LLVMContext> C) {
+                                   std::unique_ptr<LLVMContext> C,
+                                   unsigned OptLevel) {
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
 
   if (auto Err = applyDataLayout(*M))
     return Err;
 
-  return CompileLayer.add(ES->getMainJITDylib(),
-                          ThreadSafeModule(std::move(M), std::move(C)),
-                          ES->allocateVModule());
+  OptimizeLayer.setTransform(SimpleOptimizer(OptLevel));
+
+  return OptimizeLayer.add(ES->getMainJITDylib(),
+                           ThreadSafeModule(std::move(M), std::move(C)),
+                           ES->allocateVModule());
 }
 
 Expected<JITTargetAddress> JitFromScratch::getFunctionAddr(StringRef Name) {

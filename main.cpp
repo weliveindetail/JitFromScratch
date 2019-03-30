@@ -21,6 +21,26 @@
 
 using namespace llvm;
 
+static cl::opt<char>
+    OptLevel("O",
+        cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                  "(default = '-O2')"),
+        cl::Prefix, cl::ZeroOrMore, cl::init(' '));
+
+Expected<unsigned> getOptLevel() {
+  switch (OptLevel) {
+    case '0': return 0;
+    case '1': return 1;
+    case ' ':
+    case '2': return 2;
+    case '3': return 3;
+    default:
+      return createStringError(inconvertibleErrorCode(),
+                               "Invalid optimization level: -O%c",
+                               (char)OptLevel);
+  }
+}
+
 Expected<std::string> codegenIR(Module &module, unsigned items) {
   LLVMContext &ctx = module.getContext();
   IRBuilder<> B(ctx);
@@ -131,7 +151,9 @@ int main(int argc, char **argv) {
   M->setDataLayout(Jit.getDataLayout());
 
   std::string JitedFnName = ExitOnErr(codegenIR(*M, arrayElements(x)));
-  ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
+  unsigned OptLevel = ExitOnErr(getOptLevel());
+
+  ExitOnErr(Jit.submitModule(std::move(M), std::move(C), OptLevel));
 
   // Request function; this compiles to machine code and links.
   auto integerDistances =

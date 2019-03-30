@@ -39,6 +39,7 @@ endif()
 add_executable(JitFromScratch
   main.cpp
   JitFromScratch.cpp
+  SimpleOptimizer.cpp
 )
 
 target_include_directories(JitFromScratch PRIVATE
@@ -65,6 +66,7 @@ set(llvm_libs
   LLVMGlobalISel
   LLVMInstCombine
   LLVMInstrumentation
+  LLVMipo
   LLVMJITLink
   LLVMLinker
   LLVMIRReader
@@ -81,6 +83,7 @@ set(llvm_libs
   LLVMSupport
   LLVMTarget
   LLVMTransformUtils
+  LLVMVectorize
   LLVMX86AsmParser
   LLVMX86CodeGen
   LLVMX86Desc
