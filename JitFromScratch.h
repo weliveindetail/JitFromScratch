@@ -43,6 +43,7 @@ public:
 private:
   std::unique_ptr<llvm::orc::ExecutionSession> ES;
   std::unique_ptr<llvm::TargetMachine> TM;
+  llvm::JITEventListener *GDBListener;
 
   llvm::orc::RTDyldObjectLinkingLayer ObjLinkingLayer;
   llvm::orc::IRCompileLayer CompileLayer;
@@ -51,6 +52,9 @@ private:
 
   llvm::orc::RTDyldObjectLinkingLayer::GetMemoryManagerFunction
   createMemoryManagerFtor();
+
+  llvm::orc::RTDyldObjectLinkingLayer::NotifyLoadedFunction
+  createNotifyLoadedFtor();
 
   std::string mangle(llvm::StringRef UnmangledName);
   llvm::Error applyDataLayout(llvm::Module &M);
