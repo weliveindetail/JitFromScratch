@@ -15,12 +15,14 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-JitFromScratch::JitFromScratch(ExitOnError ExitOnErr)
+JitFromScratch::JitFromScratch(ExitOnError ExitOnErr,
+                               const std::string &CacheDir)
     : ES(std::make_unique<ExecutionSession>()),
       TM(createTargetMachine(ExitOnErr)),
+      ObjCache(std::make_unique<SimpleObjectCache>(CacheDir)),
       GDBListener(JITEventListener::createGDBRegistrationListener()),
       ObjLinkingLayer(*ES, createMemoryManagerFtor()),
-      CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*TM)),
+      CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*TM, ObjCache.get())),
       OptimizeLayer(*ES, CompileLayer) {
   ObjLinkingLayer.setNotifyLoaded(createNotifyLoadedFtor());
   if (auto R = createHostProcessResolver())
@@ -94,7 +96,22 @@ Error JitFromScratch::applyDataLayout(Module &M) {
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
                                    std::unique_ptr<LLVMContext> C,
-                                   unsigned OptLevel) {
+                                   unsigned OptLevel, bool AddToCache) {
+  if (AddToCache)
+    ObjCache->setCacheModuleName(*M);
+
+  auto Obj = ObjCache->getCachedObject(*M);
+  if (!Obj) {
+    M.~unique_ptr();
+    return Obj.takeError();
+  }
+
+  if (Obj->hasValue()) {
+    M.~unique_ptr();
+    return ObjLinkingLayer.add(ES->getMainJITDylib(),
+                               std::move(Obj->getValue()));
+  }
+
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
 
   if (auto Err = applyDataLayout(*M))
