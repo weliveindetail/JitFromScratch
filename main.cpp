@@ -27,6 +27,11 @@ static cl::opt<char>
                   "(default = '-O2')"),
         cl::Prefix, cl::ZeroOrMore, cl::init(' '));
 
+static cl::opt<std::string>
+    CacheDir("cache-dir",
+        cl::desc("Pass a directory name to enable object file cache"),
+        cl::value_desc("directory"), cl::init(""));
+
 Expected<unsigned> getOptLevel() {
   switch (OptLevel) {
     case '0': return 0;
@@ -141,7 +146,7 @@ int main(int argc, char **argv) {
   int x[]{0, 1, 2};
   int y[]{3, 1, -1};
 
-  JitFromScratch Jit(ExitOnErr);
+  JitFromScratch Jit(ExitOnErr, CacheDir);
 
   LLVM_DEBUG(dbgs() << "JITing for host target: "
                     << Jit.getTargetTriple().normalize() << "\n\n");
@@ -152,8 +157,9 @@ int main(int argc, char **argv) {
 
   std::string JitedFnName = ExitOnErr(codegenIR(*M, arrayElements(x)));
   unsigned OptLevel = ExitOnErr(getOptLevel());
+  bool AddToCache = !CacheDir.empty();
 
-  ExitOnErr(Jit.submitModule(std::move(M), std::move(C), OptLevel));
+  ExitOnErr(Jit.submitModule(std::move(M), std::move(C), OptLevel, AddToCache));
 
   // Request function; this compiles to machine code and links.
   auto integerDistances =

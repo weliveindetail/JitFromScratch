@@ -17,9 +17,12 @@
 #include <memory>
 #include <string>
 
+#include "SimpleObjectCache.h"
+
 class JitFromScratch {
 public:
-  JitFromScratch(llvm::ExitOnError ExitOnErr);
+  JitFromScratch(llvm::ExitOnError ExitOnErr,
+                 const std::string &CacheDir = "");
 
   // Not a value type.
   JitFromScratch(const JitFromScratch &) = delete;
@@ -37,7 +40,7 @@ public:
 
   llvm::Error submitModule(std::unique_ptr<llvm::Module> M,
                            std::unique_ptr<llvm::LLVMContext> C,
-                           unsigned OptLevel);
+                           unsigned OptLevel, bool AddToCache);
 
   template <class Signature_t>
   llvm::Expected<std::function<Signature_t>> getFunction(llvm::StringRef Name) {
@@ -51,6 +54,8 @@ public:
 private:
   std::unique_ptr<llvm::orc::ExecutionSession> ES;
   std::unique_ptr<llvm::TargetMachine> TM;
+
+  std::unique_ptr<SimpleObjectCache> ObjCache;
   llvm::JITEventListener *GDBListener;
 
   llvm::orc::RTDyldObjectLinkingLayer ObjLinkingLayer;
