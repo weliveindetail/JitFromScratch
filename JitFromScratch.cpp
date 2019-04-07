@@ -15,11 +15,14 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-JitFromScratch::JitFromScratch(std::unique_ptr<TargetMachine> TM)
+JitFromScratch::JitFromScratch(std::unique_ptr<TargetMachine> TM,
+                               const std::string &CacheDir)
     : ES(std::make_unique<ExecutionSession>()), TM(std::move(TM)),
+      ObjCache(std::make_unique<SimpleObjectCache>(CacheDir)),
       GDBListener(JITEventListener::createGDBRegistrationListener()),
       ObjLinkingLayer(*ES, createMemoryManagerFtor(), createNotifyLoadedFtor()),
-      CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*this->TM)),
+      CompileLayer(*ES, ObjLinkingLayer,
+                   SimpleCompiler(*this->TM, ObjCache.get())),
       OptimizeLayer(*ES, CompileLayer) {
   if (auto R = createHostProcessResolver())
     ES->getMainJITDylib().setGenerator(std::move(R));
@@ -86,7 +89,10 @@ Error JitFromScratch::applyDataLayout(Module &M) {
 
 Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
                                    std::unique_ptr<LLVMContext> C,
-                                   unsigned OptLevel) {
+                                   unsigned OptLevel, bool AddToCache) {
+  if (AddToCache)
+    ObjCache->setCacheModuleName(*M);
+
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
 
   if (auto Err = applyDataLayout(*M))

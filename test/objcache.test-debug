@@ -1,0 +1,20 @@
+# RUN: rm -rf cache/
+
+# Object cache is disabled by default
+# RUN: JitFromScratch -debug -debug-only=jitfromscratch 2>&1 | FileCheck -check-prefix=CACHELESS-CHECK %s
+# CACHELESS-CHECK-NOT: Read cached object 'cache/JitFromScratch.o'
+# CACHELESS-CHECK-NOT: Write cached object 'cache/JitFromScratch.o'
+# CACHELESS-CHECK: Integer Distances: 3, 0, 3
+
+# Object files are written to the cache
+# RUN: JitFromScratch -cache-dir=cache/ -debug -debug-only=jitfromscratch 2>&1 | FileCheck -check-prefix=WRITE-CHECK %s
+# WRITE-CHECK-NOT: Read cached object 'cache/JitFromScratch.o'
+# WRITE-CHECK: Create new cache directory 'cache/'
+# WRITE-CHECK: Write cached object 'cache/JitFromScratch.o'
+# WRITE-CHECK: Integer Distances: 3, 0, 3
+
+# Object files are read from the cache
+# RUN: JitFromScratch -cache-dir=cache/ -debug -debug-only=jitfromscratch 2>&1 | FileCheck -check-prefix=READ-CHECK %s
+# READ-CHECK: Read cached object 'cache/JitFromScratch.o'
+# READ-CHECK-NOT: Write cached object 'cache/JitFromScratch.o'
+# READ-CHECK: Integer Distances: 3, 0, 3

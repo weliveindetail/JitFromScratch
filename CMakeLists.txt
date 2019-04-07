@@ -63,6 +63,7 @@ add_executable(JitFromScratch
   main.cpp
   JitFromScratch.cpp
   SimpleOptimizer.cpp
+  SimpleObjectCache.cpp
 )
 
 target_include_directories(JitFromScratch PRIVATE
@@ -116,6 +117,11 @@ endif()
 
 add_custom_target(run
   COMMAND "$<TARGET_FILE:JitFromScratch>" ${debug_args}
+  COMMENT "Running JitFromScratch"
+)
+
+add_custom_target(run-cached
+  COMMAND "$<TARGET_FILE:JitFromScratch>" ${debug_args} -cache-dir=cache/
   COMMENT "Running JitFromScratch"
 )
 
