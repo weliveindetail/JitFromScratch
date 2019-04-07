@@ -16,8 +16,10 @@ using namespace llvm::orc;
 JitFromScratch::JitFromScratch(ExitOnError ExitOnErr)
     : ES(std::make_unique<ExecutionSession>()),
       TM(createTargetMachine(ExitOnErr)),
+      GDBListener(JITEventListener::createGDBRegistrationListener()),
       ObjLinkingLayer(*ES, createMemoryManagerFtor()),
       CompileLayer(*ES, ObjLinkingLayer, SimpleCompiler(*TM)) {
+  ObjLinkingLayer.setNotifyLoaded(createNotifyLoadedFtor());
   if (auto R = createHostProcessResolver())
     ES->getMainJITDylib().setGenerator(std::move(R));
 }
@@ -55,6 +57,13 @@ GetMemoryManagerFunction JitFromScratch::createMemoryManagerFtor() {
   return []() -> GetMemoryManagerFunction::result_type {
     return std::make_unique<SectionMemoryManager>();
   };
+}
+
+RTDyldObjectLinkingLayer::NotifyLoadedFunction
+JitFromScratch::createNotifyLoadedFtor() {
+  using namespace std::placeholders;
+  return std::bind(&JITEventListener::notifyObjectLoaded,
+                   GDBListener, _1, _2, _3);
 }
 
 std::string JitFromScratch::mangle(StringRef UnmangledName) {
