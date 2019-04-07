@@ -5,6 +5,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/CodeGen.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/Format.h>
@@ -134,7 +135,7 @@ int main(int argc, char **argv) {
 
   std::string JitedFnName = ExitOnErr(codegenIR(*M, arrayElements(x)));
 
-  JitFromScratch Jit(std::move(TM), DL);
+  JitFromScratch Jit(std::move(TM));
   ExitOnErr(Jit.submitModule(std::move(M), std::move(C)));
 
   // Request function; this compiles to machine code and links.

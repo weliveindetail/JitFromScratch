@@ -2,19 +2,25 @@
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ExecutionEngine/JITSymbol.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/IRTransformLayer.h>
+#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
+#include <llvm/Support/CodeGen.h>
 #include <llvm/Target/TargetMachine.h>
 
 #include <functional>
 #include <memory>
+#include <string>
 
-class JitFromScratch : public llvm::orc::LLJIT {
+class JitFromScratch {
 public:
-  JitFromScratch(std::unique_ptr<llvm::TargetMachine> TM, llvm::DataLayout DL);
+  JitFromScratch(std::unique_ptr<llvm::TargetMachine> TM);
 
   // Not a value type.
   JitFromScratch(const JitFromScratch &) = delete;
@@ -35,8 +41,19 @@ public:
   }
 
 private:
-  llvm::orc::JITDylib::GeneratorFunction
-  createHostProcessResolver(llvm::DataLayout DL);
+  std::unique_ptr<llvm::orc::ExecutionSession> ES;
+  std::unique_ptr<llvm::TargetMachine> TM;
+
+  llvm::orc::RTDyldObjectLinkingLayer ObjLinkingLayer;
+  llvm::orc::IRCompileLayer CompileLayer;
+
+  llvm::orc::JITDylib::GeneratorFunction createHostProcessResolver();
+
+  llvm::orc::RTDyldObjectLinkingLayer::GetMemoryManagerFunction
+  createMemoryManagerFtor();
+
+  std::string mangle(llvm::StringRef UnmangledName);
+  llvm::Error applyDataLayout(llvm::Module &M);
 
   llvm::Expected<llvm::JITTargetAddress> getFunctionAddr(llvm::StringRef Name);
 };
