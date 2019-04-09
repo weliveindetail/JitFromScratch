@@ -93,6 +93,18 @@ Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
   if (AddToCache)
     ObjCache->setCacheModuleName(*M);
 
+  auto Obj = ObjCache->getCachedObject(*M);
+  if (!Obj) {
+    M.~unique_ptr();
+    return Obj.takeError();
+  }
+
+  if (Obj->hasValue()) {
+    M.~unique_ptr();
+    return ObjLinkingLayer.add(ES->getMainJITDylib(),
+                               std::move(Obj->getValue()));
+  }
+
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
 
   if (auto Err = applyDataLayout(*M))
