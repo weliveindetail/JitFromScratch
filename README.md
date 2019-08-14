@@ -1,6 +1,8 @@
-# JitFromScratch / jit-basics
+# JitFromScratch / llvm50 / jit-basics
 
 [![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm50/jit-basics)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 5.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch).**
 
 This branch establishes a common code base for all further examples by demonstrating how to compile the code for a simple function at runtime:
 
