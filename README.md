@@ -1,6 +1,8 @@
-# JitFromScratch / jit-function-calls / implicit-mangled
+# JitFromScratch / llvm50 / jit-function-calls / implicit-mangled
 
-[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=jit-function-calls/implicit-mangled)](https://travis-ci.org/weliveindetail/JitFromScratch)
+[![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm50/jit-function-calls/implicit-mangled)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 5.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch).**
 
 This branch shows how to call a regular C++ function from JITed code using its pre-mangled name. Resolution happens automatically in the ObjectLayer while linking. C++ name mangling is ABI-specific and therefore varies between compilers, platforms and versions of both.
 
@@ -13,7 +15,7 @@ Tested on Linux Mint 18, Mac OS X 10.12 and Windows 10. For detailed instruction
 ### Linux / OSX
 ```
 $ cd JitFromScratch/mangle-demo
-$ ./mangle_ref_unix 
+$ ./mangle_ref_unix
                  U __Z18customIntAllocatorj
 0000000000000000 T _main
 $ cd ../../JitFromScratch-build
