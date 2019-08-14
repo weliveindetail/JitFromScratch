@@ -1,6 +1,8 @@
-# JitFromScratch / jit-debug / llvm-debug-dumps
+# JitFromScratch / llvm50 / jit-debug / llvm-debug-dumps
 
 [![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm50/jit-debug/llvm-debug-dumps)](https://travis-ci.org/weliveindetail/JitFromScratch)
+
+**This is the LLVM 5.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch).**
 
 This branch shows how to adopt the LLVM approach for printing *per-component* debug dumps, controlled via command line arguments `-debug` and `-debug-only`.
 
@@ -19,7 +21,7 @@ source_filename = "JitFromScratch"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ```
 
-You can also dump details of other LLVM components like [RuntimeDyld](https://github.com/llvm-mirror/llvm/blob/master/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp#L29), which can be extremely useful when tracking down bugs. Example output for the **[jit-basics branch](https://github.com/weliveindetail/JitFromScratch/tree/jit-basics)**:
+You can also dump details of other LLVM components like [RuntimeDyld](https://github.com/llvm/llvm-project/blob/release/5.x/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp#L29), which can be extremely useful when tracking down bugs. Example output for the **[jit-basics branch](https://github.com/weliveindetail/JitFromScratch/tree/llvm50/jit-basics)**:
 ```
 $ ./JitFromScratch -debug -debug-only dyld
 Parse symbols:
