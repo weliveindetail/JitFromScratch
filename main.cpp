@@ -1,5 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <llvm/Support/Format.h>
+#include <llvm/Support/raw_ostream.h>
+
+using namespace llvm;
 
 // Determine the size of a C array at compile-time.
 template <typename T, size_t sizeOfArray>
@@ -39,7 +41,8 @@ int main(int argc, char **argv) {
   int y[]{3, 1, -1};
   int *z = integerDistances(x, y);
 
-  printf("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
+  outs() << format("Integer Distances: %d, %d, %d\n\n", z[0], z[1], z[2]);
+  outs().flush();
 
   return 0;
 }
