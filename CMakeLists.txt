@@ -25,6 +25,10 @@ if(LLVM_BUILD_MAIN_SRC_DIR AND EXISTS "${LLVM_BUILD_MAIN_SRC_DIR}" AND UNIX)
   )
 endif()
 
+# Import extra CMake helpers from LLVM
+list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+include(AddLLVM)
+
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No explicit CMAKE_BUILD_TYPE provided; JitFromScratch defaults to the build type of LLVM")
   set(CMAKE_BUILD_TYPE ${LLVM_BUILD_TYPE} CACHE STRING "" FORCE)
@@ -74,4 +78,4 @@ add_custom_target(run
   COMMENT "Running JitFromScratch"
 )
 
-message("")
+add_subdirectory(test)
