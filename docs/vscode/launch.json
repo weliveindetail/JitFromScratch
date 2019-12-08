@@ -1,0 +1,31 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Launch",
+      "program": "${workspaceRoot}/build/JitFromScratch",
+      "args": [ "-debug", "-debug-only=jitfromscratch" ],
+      "cwd": "${workspaceFolder}/build"
+    },
+    {
+      "type": "lldb",
+      "request": "custom",
+      "name": "Docker",
+      "sourceMap": {
+        "/workspace/jitfromscratch": "${workspaceFolder}",
+        "/workspace/llvm": "${workspaceFolder}/build/llvm-project"
+      },
+      "targetCreateCommands": [
+        "platform select remote-linux",
+        "platform connect connect://localhost:9000",
+        "target create /workspace/jitfromscratch-debug/JitFromScratch"
+      ],
+      "processCreateCommands": ["process launch"]
+    }
+  ]
+}

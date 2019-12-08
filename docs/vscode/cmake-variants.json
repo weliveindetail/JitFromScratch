@@ -1,0 +1,31 @@
+{
+  "LLVM": {
+    "default": "LLVM 9.0",
+    "choices": {
+      "LLVM 9.0": {
+        "short": "LLVM 9.0",
+        "long": "LLVM Release 9.0",
+        "settings": {
+          "LLVM_DIR": "/usr/local/opt/llvm/lib/cmake/llvm"
+        }
+      }
+    }
+  },
+  "buildType": {
+    "default": "debug",
+    "choices": {
+      "debug": {
+        "short": "Debug",
+        "long": "Compile in debug mode",
+        "buildType": "Debug",
+        "linkage": "static"
+      },
+      "release": {
+        "short": "Release",
+        "long": "Compile in release mode",
+        "buildType": "Release",
+        "linkage": "static"
+      }
+    }
+  }
+}

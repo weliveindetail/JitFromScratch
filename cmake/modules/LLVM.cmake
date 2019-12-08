@@ -8,6 +8,7 @@ else()
 endif()
 
 find_package(LLVM 9.0 REQUIRED PATHS /usr/local/opt/llvm/lib/cmake/llvm)
+message(STATUS "LLVM Package version: ${LLVM_PACKAGE_VERSION}")
 
 if(LLVM_BUILD_MAIN_SRC_DIR)
   message(STATUS "LLVM Source directory: ${LLVM_BUILD_MAIN_SRC_DIR}")

@@ -1,0 +1,22 @@
+{
+  "LLVM": {
+    "default": "LLVM 9.0",
+    "choices": {
+      "LLVM 9.0": {
+        "short": "LLVM 9.0",
+        "long": "LLVM Release 9.0"
+      }
+    }
+  },
+  "buildType": {
+    "default": "debug",
+    "choices": {
+      "debug": {
+        "short": "Debug",
+        "long": "Compile in debug mode",
+        "buildType": "Debug",
+        "linkage": "static"
+      }
+    }
+  }
+}
