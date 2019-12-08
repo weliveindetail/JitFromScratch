@@ -1,0 +1,10 @@
+image: weliveindetail/jitfromscratch:llvm09-gitpod
+
+tasks:
+  - init: cd /workspace/JitFromScratch/ && cp -R /home/gitpod/.vscode . && ([ ! "${CHECKOUT+1}" ] || git checkout --quiet "${CHECKOUT}") && CC=clang CXX=clang++ cmake -G Ninja -B /workspace/JitFromScratch/build && ninja -C /workspace/JitFromScratch/build -v run
+
+vscode:
+  extensions:
+    - vadimcn.vscode-lldb@1.4.3:1x1ecmrxqDVofzxcg1Pe1A==
+    - ms-vscode.cmake-tools@1.2.3:qLtqI3aUcEBX9EpuK0ZCyw==
+    - ms-vscode.cpptools@0.26.2:Pq/tmf2WN3SanVzB4xZc1g==
