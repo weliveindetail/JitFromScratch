@@ -1,8 +1,8 @@
 # JitFromScratch docker image for running lit tests
 #
-# The image ships a prebuilt release version of LLVM 9 and a checkout of the
+# The image ships a prebuilt release version of LLVM 10 and a checkout of the
 # JitFromScratch sources. By default the container will run the tests on a
-# build from the llvm09/master branch. Passing values for the environment
+# build from the llvm10/master branch. Passing values for the environment
 # variables REMOTE and CHECKOUT allows to test arbitrary forks and/or revisions.
 #
 #   $ docker build -t <image-name> /path/to/JitFromScratch/docs/docker/test-release
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Build and install partial LLVM distribution
-RUN git clone --depth=1 --branch=release/9.x \
+RUN git clone --depth=1 --branch=master \
         https://github.com/llvm/llvm-project.git /workspace/llvm-project && \
     \
     # Configure
@@ -32,7 +32,7 @@ RUN git clone --depth=1 --branch=release/9.x \
         -DLLVM_INCLUDE_TESTS=OFF \
         -DLLVM_USE_LINKER=lld \
         -DLLVM_INSTALL_UTILS=ON \
-        -DLLVM_DISTRIBUTION_COMPONENTS="cmake-exports;llvm-headers;FileCheck;LLVMAggressiveInstCombine;LLVMAnalysis;LLVMAsmParser;LLVMAsmPrinter;LLVMBinaryFormat;LLVMBitReader;LLVMBitWriter;LLVMBitstreamReader;LLVMCodeGen;LLVMCore;LLVMDebugInfoCodeView;LLVMDebugInfoDWARF;LLVMDebugInfoMSF;LLVMDemangle;LLVMExecutionEngine;LLVMGlobalISel;LLVMIRReader;LLVMInstCombine;LLVMInstrumentation;LLVMJITLink;LLVMLinker;LLVMMC;LLVMMCDisassembler;LLVMMCParser;LLVMObject;LLVMOrcJIT;LLVMPasses;LLVMProfileData;LLVMRemarks;LLVMRuntimeDyld;LLVMScalarOpts;LLVMSelectionDAG;LLVMSupport;LLVMTarget;LLVMTransformUtils;LLVMVectorize;LLVMX86AsmParser;LLVMX86CodeGen;LLVMX86Desc;LLVMX86Info;LLVMX86Utils;LLVMipo" && \
+        -DLLVM_DISTRIBUTION_COMPONENTS="cmake-exports;llvm-headers;FileCheck;LLVMAggressiveInstCombine;LLVMAnalysis;LLVMAsmParser;LLVMAsmPrinter;LLVMBinaryFormat;LLVMBitReader;LLVMBitWriter;LLVMBitstreamReader;LLVMCodeGen;LLVMCore;LLVMDebugInfoCodeView;LLVMDebugInfoDWARF;LLVMDebugInfoMSF;LLVMDemangle;LLVMExecutionEngine;LLVMGlobalISel;LLVMIRReader;LLVMInstCombine;LLVMInstrumentation;LLVMJITLink;LLVMLinker;LLVMMC;LLVMMCDisassembler;LLVMCFGuard;LLVMMCParser;LLVMObject;LLVMOrcError;LLVMOrcJIT;LLVMPasses;LLVMProfileData;LLVMRemarks;LLVMRuntimeDyld;LLVMScalarOpts;LLVMSelectionDAG;LLVMSupport;LLVMTarget;LLVMTextAPI;LLVMTransformUtils;LLVMVectorize;LLVMX86AsmParser;LLVMX86CodeGen;LLVMX86Desc;LLVMX86Info;LLVMX86Utils;LLVMipo" && \
     \
     # Build and install
     ninja -C /workspace/llvm-build install-distribution && \
@@ -49,7 +49,7 @@ RUN git clone --depth=1 --branch=release/9.x \
 RUN git clone https://github.com/weliveindetail/JitFromScratch.git \
               /workspace/jitfromscratch && \
     cd /workspace/jitfromscratch && \
-    git checkout llvm09/master
+    git checkout llvm10/master
 
 # By default: update, build, run and test on startup
 CMD set -x && \
