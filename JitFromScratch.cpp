@@ -18,6 +18,7 @@ using namespace llvm::orc;
 JitFromScratch::JitFromScratch(ExitOnError ExitOnErr,
                                const std::string &CacheDir)
     : ES(std::make_unique<ExecutionSession>()),
+      MainJD(ES->createJITDylib("main")),
       TM(createTargetMachine(ExitOnErr)),
       ObjCache(std::make_unique<SimpleObjectCache>(CacheDir)),
       GDBListener(JITEventListener::createGDBRegistrationListener()),
@@ -26,12 +27,13 @@ JitFromScratch::JitFromScratch(ExitOnError ExitOnErr,
       OptimizeLayer(*ES, CompileLayer) {
   ObjLinkingLayer.setNotifyLoaded(createNotifyLoadedFtor());
   if (auto R = createHostProcessResolver())
-    ES->getMainJITDylib().setGenerator(std::move(R));
+    MainJD.addGenerator(std::move(R));
 }
 
-JITDylib::GeneratorFunction JitFromScratch::createHostProcessResolver() {
+std::unique_ptr<JITDylib::DefinitionGenerator>
+JitFromScratch::createHostProcessResolver() {
   char Prefix = TM->createDataLayout().getGlobalPrefix();
-  Expected<JITDylib::GeneratorFunction> R =
+  Expected<std::unique_ptr<DynamicLibrarySearchGenerator>> R =
       DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix);
 
   if (!R) {
@@ -39,14 +41,14 @@ JITDylib::GeneratorFunction JitFromScratch::createHostProcessResolver() {
     return nullptr;
   }
 
-  if (!*R) {
+  if (*R == nullptr) {
     ES->reportError(createStringError(
         inconvertibleErrorCode(),
         "Generator function for host process symbols must not be null"));
     return nullptr;
   }
 
-  return *R;
+  return std::move(*R);
 }
 
 std::unique_ptr<TargetMachine>
@@ -108,8 +110,7 @@ Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
 
   if (Obj->hasValue()) {
     M.~unique_ptr();
-    return ObjLinkingLayer.add(ES->getMainJITDylib(),
-                               std::move(Obj->getValue()));
+    return ObjLinkingLayer.add(MainJD, std::move(Obj->getValue()));
   }
 
   LLVM_DEBUG(dbgs() << "Submit IR module:\n\n" << *M << "\n\n");
@@ -119,16 +120,13 @@ Error JitFromScratch::submitModule(std::unique_ptr<Module> M,
 
   OptimizeLayer.setTransform(SimpleOptimizer(OptLevel));
 
-  return OptimizeLayer.add(ES->getMainJITDylib(),
-                           ThreadSafeModule(std::move(M), std::move(C)),
+  return OptimizeLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(C)),
                            ES->allocateVModule());
 }
 
 Expected<JITTargetAddress> JitFromScratch::getFunctionAddr(StringRef Name) {
-  SymbolStringPtr NamePtr = ES->intern(mangle(Name));
-  JITDylibSearchList JDs{{&ES->getMainJITDylib(), true}};
-
-  Expected<JITEvaluatedSymbol> S = ES->lookup(JDs, NamePtr);
+  JITDylibSearchOrder JDs = makeJITDylibSearchOrder({&MainJD});
+  Expected<JITEvaluatedSymbol> S = ES->lookup(JDs, ES->intern(mangle(Name)));
   if (!S)
     return S.takeError();
 

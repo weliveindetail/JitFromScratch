@@ -12,21 +12,21 @@ using namespace llvm::orc;
 Expected<ThreadSafeModule>
 SimpleOptimizer::operator()(ThreadSafeModule TSM,
                             const MaterializationResponsibility &) {
-  Module &M = *TSM.getModule();
+  TSM.withModuleDo([&](Module &M) {
+    legacy::FunctionPassManager FPM(&M);
+    B.populateFunctionPassManager(FPM);
 
-  legacy::FunctionPassManager FPM(&M);
-  B.populateFunctionPassManager(FPM);
+    FPM.doInitialization();
+    for (Function &F : M)
+      FPM.run(F);
+    FPM.doFinalization();
 
-  FPM.doInitialization();
-  for (Function &F : M)
-    FPM.run(F);
-  FPM.doFinalization();
+    legacy::PassManager MPM;
+    B.populateModulePassManager(MPM);
+    MPM.run(M);
 
-  legacy::PassManager MPM;
-  B.populateModulePassManager(MPM);
-  MPM.run(M);
-
-  LLVM_DEBUG(dbgs() << "Optimized IR module:\n\n" << M << "\n\n");
+    LLVM_DEBUG(dbgs() << "Optimized IR module:\n\n" << M << "\n\n");
+  });
 
   return std::move(TSM);
 }

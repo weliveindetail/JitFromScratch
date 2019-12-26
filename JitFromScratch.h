@@ -53,6 +53,7 @@ public:
 
 private:
   std::unique_ptr<llvm::orc::ExecutionSession> ES;
+  llvm::orc::JITDylib &MainJD;
   std::unique_ptr<llvm::TargetMachine> TM;
 
   std::unique_ptr<SimpleObjectCache> ObjCache;
@@ -62,7 +63,8 @@ private:
   llvm::orc::IRCompileLayer CompileLayer;
   llvm::orc::IRTransformLayer OptimizeLayer;
 
-  llvm::orc::JITDylib::GeneratorFunction createHostProcessResolver();
+  std::unique_ptr<llvm::orc::JITDylib::DefinitionGenerator>
+  createHostProcessResolver();
 
   std::unique_ptr<llvm::TargetMachine>
   createTargetMachine(llvm::ExitOnError ExitOnErr);
