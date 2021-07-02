@@ -1,3 +1,8 @@
+:warning: This repository works with LLVM versions 4.0 to 8.0 and is now archived. Please find examples for more recent versions in-tree: https://github.com/llvm/llvm-project/blob/main/llvm/examples/OrcV2Examples/
+
+<br>
+<br>
+
 # JitFromScratch
 
 <a href="https://github.com/weliveindetail/JitFromScratch/blob/master/LICENSE.md"><img src="https://licensebuttons.net/l/by-sa/3.0/88x31.png" alt="CC BY-SA 4.0" width="57" height="20"></a> [![Build Status](https://travis-ci.org/weliveindetail/JitFromScratch.svg?branch=llvm09/master)](https://travis-ci.org/weliveindetail/JitFromScratch/branches/) <a href="https://gitpod.io/#https://github.com/weliveindetail/JitFromScratch"><img src="https://gitpod.io/button/open-in-gitpod.svg" alt="Open in Gitpod" width="86" height="20"></a>
